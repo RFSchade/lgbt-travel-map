@@ -1,0 +1,10 @@
+# OS generated files #
+######################
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# types of files #
+######################
+*.Rproj
