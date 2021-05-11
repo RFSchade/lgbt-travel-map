@@ -1,0 +1,41 @@
+---
+title: "Data Cleaning Script"
+author: "Rebecca Folmer Schade"
+date: "11 maj 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading packages 
+```{r}
+install.packages("osmdata")
+library(osmdata)
+```
+
+## Getting point data from open street maps
+Use:
+
+* `osmdata::opq()` to define the bounding box of the osm request
+* `osmdata::add_osm_feature()` to define the key:value pairs you are looking for
+* `osmdata::osmdata_sf()` to retrieve the osm data.
+
+```{r}
+
+
+# Create a bounding box
+bb  <- suburbs %>% st_transform(4326) %>% st_bbox()
+plot(bb)
+q <- opq(bbox = bb,timeout = 180)
+qa  <- add_osm_feature(q, key = 'amenity',value = 'public_bath')
+#qb     <- add_osm_feature(q, key = 'amenity',value = 'drinking_water')
+qc     <- add_osm_feature(q, key = 'amenity',value = 'shower')
+qd     <- add_osm_feature(q, key = 'amenity',value = 'toilets')
+#qe     <- add_osm_feature(q, key = 'amenity',value = 'water_point')
+public_bath <- c(osmdata_sf(qa),
+                 osmdata_sf(qc),
+                 osmdata_sf(qd))
+```
+
