@@ -7,13 +7,124 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "..")
 ```
 
 ## Loading packages 
 ```{r}
-install.packages("osmdata")
+# install.packages("osmdata")
 library(osmdata)
+library(sf)
+library(tidyverse)
+library(raster)
+# install.packages(c("httr", "jsonlite"))
+library(httr)
+library(jsonlite)
 ```
+
+## Creating bounding box
+
+### Loading geometry of countries
+Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com.
+
+```{r}
+# ne_10m_admin_0_countries.shp - geometry for countries
+world_geo <- st_read("data/ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp")
+
+# Let's take a look at the data 
+head(world_geo)
+
+# Let's try plotting the data 
+plot(st_geometry(world_geo))
+
+# Let's have a look at how many countries are plotted
+sort(unique(world_geo$NAME))
+# > We only want Scandenavia: Denmark, Norway, Sweden
+
+# Let's try filtering for the three countries
+Scand_geo <- world_geo %>% dplyr::filter(NAME %in% c("Denmark", "Norway", "Sweden"))
+
+# Let's try plotting this
+plot(st_geometry(Scand_geo))
+
+# > This is too small to work with 
+```
+
+## Let's try that again 
+This time I am using data from Euro.stat - These can't be used for comercial purposes, so we might have to change the license on our github page 
+
+```{r}
+# Trying to get the data from the API
+res_meta <-  GET("https://gisco-services.ec.europa.eu/distribution/v2/countries/datasets.json")
+res <- GET("https://gisco-services.ec.europa.eu/distribution/v2/countries/countries-2020-files.json")
+res
+
+rawToChar(res$content)
+data <-  fromJSON(rawToChar(res$content))
+names(data)
+data$shp$CNTR_BN_01M_2020_4326_COASTL.shp.zip
+
+res_2 <- GET("https://gisco-services.ec.europa.eu/distribution/v2/countries/countries-2020-files.json",
+                    query = list())
+
+  
+rawToChar(res$content)
+
+# Figured out how to download a zip file instead
+euro_geo <- st_read("data/CNTR_RG_01M_2020_3035.shp/CNTR_RG_01M_2020_3035.shp")
+head(euro_geo)
+
+# Let's try plotting the data 
+plot(st_geometry(euro_geo))
+
+# > This is not working either. I will have to come back to it later. 
+
+# Trying to re-project map to EPSG:4668
+crs(euro_geo, asText = TRUE)
+
+# Try to transform
+euro_transform <- st_transform(euro_geo, crs = 4668)
+
+
+# Let's try plotting the data 
+head(euro_transform)
+plot(st_geometry(euro_transform))
+
+
+box = c(xmin = 1.4, ymin = 53.1, xmax = 35.2, ymax = 72.2)
+pol = st_sfc(st_buffer(st_point(c(.5, .5)), .6))
+plot(pol)
+pol_sf = st_sf(a=1, geom=pol)
+plot(pol_sf)
+plot(st_crop(pol, box))
+plot(st_crop(pol_sf, st_bbox(box)))
+# alternative:
+st_crop(st_geometry(euro_transform), st_bbox(box))
+plot(st_crop(st_geometry(euro_transform), st_bbox(box)))
+class(euro_tranform)
+class(pol_sf)
+plot(euro_transform)
+
+
+
+attr(st_geometry(euro_transform), "bbox") <-  st_bbox(box)
+plot(st_geometry(euro_transform))
+
+# Create a bounding box polygon
+graph_box <- st_make_grid(box, n = 1)
+
+plot(st_geometry(euro_transform));plot(graph_box, add = TRUE)
+
+# Narrowing it down to scandenavia 
+sort(unique(euro_transform$NAME_ENGL))
+scand_euro <- euro_transform %>% dplyr::filter(NAME_ENGL %in% c("Denmark", "Norway", "Sweden"))
+plot(st_geometry(scand_euro))
+
+```
+
+This link is important: https://boundingbox.klokantech.com/
+
+This was a lot of hoops to jump through just to get a bounding box. 
 
 ## Getting point data from open street maps
 Use:
@@ -23,19 +134,145 @@ Use:
 * `osmdata::osmdata_sf()` to retrieve the osm data.
 
 ```{r}
+# Create a bounding box
+bb  <- st_bbox(box)
+q <- opq(bbox = bb,timeout = 180)
+qa  <- add_osm_feature(q, key = 'lgbtq',value = 'primary')
+df <- osmdata_sf(qa)
+class(df)
+unique_osmdata(df)
 
+# > Ok - I think I've got the general idea, but I will have to continue later. 
+
+lgbt_points <- df$osm_points
+lgbt_polygon <- df$osm_polygons
+
+# From exploration of the data, I can see that there are many columns with what appears to be important NA's. Also, the amount of entries are limited.
+
+#=====> Trying to look at some of the other tags 
 
 # Create a bounding box
-bb  <- suburbs %>% st_transform(4326) %>% st_bbox()
-plot(bb)
+bb  <- st_bbox(box)
 q <- opq(bbox = bb,timeout = 180)
-qa  <- add_osm_feature(q, key = 'amenity',value = 'public_bath')
-#qb     <- add_osm_feature(q, key = 'amenity',value = 'drinking_water')
-qc     <- add_osm_feature(q, key = 'amenity',value = 'shower')
-qd     <- add_osm_feature(q, key = 'amenity',value = 'toilets')
-#qe     <- add_osm_feature(q, key = 'amenity',value = 'water_point')
-public_bath <- c(osmdata_sf(qa),
-                 osmdata_sf(qc),
-                 osmdata_sf(qd))
+qa2  <- add_osm_feature(q, key = 'gay',value = 'yes')
+df2<- osmdata_sf(qa2)
+class(df2)
+unique_osmdata(df2)
+# A-HA! Dice!
+gay_points <- df2$osm_points
+gay_polygon <- df2$osm_polygons
+gay_points$osm_id %in% lgbt_points$osm_id
+# While some of the points overlap, some are new. 
+
+# Create a bounding box
+bb  <- st_bbox(box)
+q <- opq(bbox = bb,timeout = 180)
+qa3  <- add_osm_feature(q, key = 'gay',value = 'welcome')
+df3<- osmdata_sf(qa3)
+class(df3)
+unique_osmdata(df3)
+# A-HA! More dice! 
+gay2_points <- df3$osm_points
+gay2_polygons <- df3$osm_polygons
+gay2_points$osm_id %in% gay_points$osm_id
+# And all these are new places too!
+
+# This is what I could find in this region. 
+
+# I want to check if it is because there aren't any hits in scandenavia
+world_box <- c(xmin = -179.9, ymin = -80.8, xmax = 179.0, ymax = 84.9)
+world_bb  <- st_bbox(world_box)
+world_q <- opq(bbox = world_bb, timeout = 180)
+world_qa  <- add_osm_feature(world_q, key = 'lgbtq:women',value = 'primary')
+world_df<- osmdata_sf(world_qa)
+class(world_df)
+unique_osmdata(world_df)
+world_df$osm_points
+# Looks like I was correct. There are definetly hits in other places. 
 ```
+
+## Clean downloading of data
+
+```{r}
+# Defining the bounding box 
+box = c(xmin = 1.4, ymin = 53.1, xmax = 35.2, ymax = 72.2)
+# Turning it into a bbox object
+bb  <- st_bbox(box)
+class(bb)
+# Defining the bbox for the OPenStreetMap request
+q <- opq(bbox = bb, timeout = 180)
+# Defining requests 
+qa <- add_osm_feature(q, key = 'lgbtq',value = 'primary')
+qb <- add_osm_feature(q, key = 'gay',value = 'yes')
+qc <- add_osm_feature(q, key = 'gay',value = 'welcome')
+# Requesting data 
+lgbtq_primary <- osmdata_sf(qa)
+gay_yes <- osmdata_sf(qb)
+gay_welcome <- osmdata_sf(qc)
+# Gathering the data 
+safe_spaces <- c(lgbtq_primary,
+                 gay_yes, 
+                 gay_welcome)
+# Having a closer look at the safe_spaces object
+class(safe_spaces)
+unique_osmdata(safe_spaces)
+```
+
+Should I, for reproduceability, show that I requested all possible combinations of keys and values for these two tags? 
+
+## Cleaning data (preliminary) 
+
+```{r}
+# Removing duplicated geometries
+safe_unique <- unique_osmdata(safe_spaces)
+
+# Change projection
+rpoint <- safe_unique$osm_points %>%
+  st_transform(crs = 4668) 
+
+# Compute centroids of the polygons and store data as points 
+rpoly  <- safe_unique$osm_polygons %>%
+  st_transform(crs = 4668) %>% 
+  st_centroid()
+
+# Merging
+keep <- which(colnames(rpoint) %in% colnames(rpoly)[colnames(rpoly) %in% colnames(rpoint)])
+keep
+keep_names <- colnames(rpoint)[keep]
+keep_names
+rpoint_selected <- rpoint %>% dplyr::select(all_of(keep_names))
+rpoly_selected <- rpoly %>% dplyr::select(all_of(keep_names))
+safe_osm <- rbind(rpoly_selected,rpoint_selected)
+
+# Remove points outside scandenavia 
+
+safe_osm_filtered <- st_intersection(safe_osm, (scand_euro %>% st_geometry() %>% st_union()))
+
+# Try plotting?
+plot(st_geometry(euro_transform));plot(st_geometry(safe_osm),col = "red", add = TRUE)
+plot(st_geometry(euro_transform));plot(st_geometry(safe_osm_filtered),col = "red", add = TRUE)
+# 
+   
+# 
+# baths_osm <- st_intersection(baths_osm, st_transform(suburbs, 32632) %>% st_geometry() %>% st_union())
+# 
+# # transform also historical baths 
+# baths_cph <- wc_spatial%>% 
+#   st_centroid() %>% 
+#   st_transform(32632) %>% 
+#   mutate(radius = sqrt(bath_per_km)) %>% 
+#   arrange(desc(bath_per_km))
+```
+
+## Saving data 
+
+```{r}
+# Saving data in the data folder 
+st_write(safe_osm_filtered, "data/test_data.shp")
+# Checking if it worked 
+test_df <- read_sf("data/test_data.shp")
+# >  It did :-) 
+
+```
+
 
