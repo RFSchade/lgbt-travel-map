@@ -1,0 +1,100 @@
+---
+title: "leaflet_pipeline"
+author: "Sophia Kleist Karlson"
+date: "18/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# Load the sf package
+pacman::p_load(pacman, dplyr, sf, leaflet, stringr)
+
+# set wd
+setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map")
+
+# load data
+test_data <- st_read("data/test_data.shp")
+
+# plot the points (don't know why it only shows 6)
+plot(st_geometry(test_data))
+
+# look at the coordinates
+test_data["geometry"]
+
+```
+
+
+```{r}
+# Europe with Layers
+leaflet() %>% 
+  addTiles() %>% 
+  setView( lng = 12.57, lat = 55.68, zoom = 5 ) %>% # view set to cosy bar in CPH
+  addProviderTiles("Esri.WorldPhysical", group = "Physical") %>% 
+  addProviderTiles("Esri.WorldImagery", group = "Aerial") %>% 
+  addProviderTiles("MtbMap", group = "Geo") %>% 
+
+addLayersControl(
+  baseGroups = c("Geo","Aerial", "Physical"),
+  options = layersControlOptions(collapsed = T))
+
+
+plot(test_data$geometry, pch = 2)
+```
+
+
+```{r}
+test_map <- leaflet() %>%
+  addTiles() %>%
+  addProviderTiles("Esri.WorldTopoMap", group = "Topo") %>%
+  addProviderTiles("Esri.WorldImagery", group = "ESRI Aerial") %>%
+  addCircleMarkers(data=test_data, # radius = mounds$HeightMax*1.5, 
+                   opacity = 0.5, color= "black", stroke = TRUE,
+                   fillOpacity = 0.5, weight=2, fillColor = "purple",
+                   popup = paste0("Name: ", test_data$name,
+                                  "<br> Type: ", test_data$amenity,
+                                  "<br> Website: ", test_data$website,
+                                  "<br> Opening hours: ", test_data$opnng_h)) %>%
+  addLayersControl(
+    baseGroups = c("Topo","ESRI Aerial"),
+    overlayGroups = c("Safe spaces"),
+    options = layersControlOptions(collapsed = T))
+
+test_map
+# make map
+test_map <- leaflet() %>% 
+  addTiles() %>% 
+  addMarkers(lng = coor$Longitude, 
+             lat = coor$Latitude,
+             popup = paste("ID:", coor$FeatureID, "<br>",
+                           "Type:", coor$FeatureType, "<br>",
+                           "Description:", coor$Description), 
+             clusterOptions = markerClusterOptions() #%>% 
+)
+
+```
+
+
+```{r}
+coor <- test_data$geometry
+
+coor
+
+longitude <- c()
+
+for (i in test_data){
+  longitude <- str_replace_all(test_data$geometry, "c(|,[:digit:])", "'")
+} 
+  
+test_data$longitude <- str_replace_all(test_data$geometry, "c\\(| |\\)", "")
+
+
+test_data$longitude <- str_replace_all(test_data$longitude, "[[:alnum:]\\.],", "")
+
+```
+[:digit:].[:digit:]
+[:xdigit:].[:xdigit:]
