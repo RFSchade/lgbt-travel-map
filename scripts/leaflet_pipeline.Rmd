@@ -30,7 +30,39 @@ test_data["geometry"]
 
 
 ```{r}
-# Europe with Layers
+# make map
+test_map <- leaflet() %>%
+  addTiles() %>%
+  addProviderTiles("Esri.WorldTopoMap", group = "Topo") %>%
+  addProviderTiles("Esri.WorldImagery", group = "ESRI Aerial") %>%
+  addCircleMarkers(data=test_data, # radius = mounds$HeightMax*1.5, 
+                   opacity = 0.5, color= "black", stroke = TRUE,
+                   fillOpacity = 0.5, weight=2, fillColor = "purple",
+                   popup = paste0("Name: ", test_data$name,
+                                  "<br> Type: ", test_data$amenity,
+                                  "<br> Website: ", test_data$website,
+                                  "<br> Opening hours: ", test_data$opnng_h),
+                                  #"<br> Adress: ", test_data$adress),
+                                  # could also add who it is for (only men, everyone etc)
+                   clusterOptions = markerClusterOptions()) %>%
+  addLayersControl(
+    baseGroups = c("Topo","ESRI Aerial"),
+    overlayGroups = c("Safe spaces"),
+    options = layersControlOptions(collapsed = T))
+
+test_map
+
+```
+
+
+
+
+
+TEST STUFF
+
+
+```{r}
+# test europe with Layers
 leaflet() %>% 
   addTiles() %>% 
   setView( lng = 12.57, lat = 55.68, zoom = 5 ) %>% # view set to cosy bar in CPH
@@ -45,39 +77,6 @@ addLayersControl(
 
 plot(test_data$geometry, pch = 2)
 ```
-
-
-```{r}
-test_map <- leaflet() %>%
-  addTiles() %>%
-  addProviderTiles("Esri.WorldTopoMap", group = "Topo") %>%
-  addProviderTiles("Esri.WorldImagery", group = "ESRI Aerial") %>%
-  addCircleMarkers(data=test_data, # radius = mounds$HeightMax*1.5, 
-                   opacity = 0.5, color= "black", stroke = TRUE,
-                   fillOpacity = 0.5, weight=2, fillColor = "purple",
-                   popup = paste0("Name: ", test_data$name,
-                                  "<br> Type: ", test_data$amenity,
-                                  "<br> Website: ", test_data$website,
-                                  "<br> Opening hours: ", test_data$opnng_h)) %>%
-  addLayersControl(
-    baseGroups = c("Topo","ESRI Aerial"),
-    overlayGroups = c("Safe spaces"),
-    options = layersControlOptions(collapsed = T))
-
-test_map
-# make map
-test_map <- leaflet() %>% 
-  addTiles() %>% 
-  addMarkers(lng = coor$Longitude, 
-             lat = coor$Latitude,
-             popup = paste("ID:", coor$FeatureID, "<br>",
-                           "Type:", coor$FeatureType, "<br>",
-                           "Description:", coor$Description), 
-             clusterOptions = markerClusterOptions() #%>% 
-)
-
-```
-
 
 ```{r}
 coor <- test_data$geometry
