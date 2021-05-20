@@ -26,29 +26,52 @@ plot(st_geometry(test_data))
 # look at the coordinates
 test_data["geometry"]
 
+st_crs(test_data)
+
+# when looking at the first map (just plotted the map as done in the next code chunk, without the last bit of this chunk) the points were not at the right place - maybe 100 meters to the north east. I also get this error message:
+#sf layer has inconsistent datum (+proj=longlat +ellps=intl +towgs84=-86,-98,-119,0,0,0,0 +no_defs).
+#Need '+proj=longlat +datum=WGS84' 
+
+# Therefore, I re-projected the test data to the crs recommended in the error message above, and it worked!
+crs_needed <- "+proj=longlat +datum=WGS84"
+safespace_crs <- st_transform(test_data, crs = crs_needed)
 ```
 
 
 ```{r}
+
+# define esri
+esri <- grep("^Esri", providers, value = TRUE)
+
+# is this needed??
+#for (provider in esri) {
+ # ruins <- ruins %>% addProviderTiles(provider, group = provider)
+#}
+
 # make map
 test_map <- leaflet() %>%
   addTiles() %>%
   addProviderTiles("Esri.WorldTopoMap", group = "Topo") %>%
   addProviderTiles("Esri.WorldImagery", group = "ESRI Aerial") %>%
-  addCircleMarkers(data=test_data, # radius = mounds$HeightMax*1.5, 
-                   opacity = 0.5, color= "black", stroke = TRUE,
+  addCircleMarkers(data = safespace_crs,
+                   opacity = 0.5, color = "black", stroke = TRUE,
                    fillOpacity = 0.5, weight=2, fillColor = "purple",
                    popup = paste0("Name: ", test_data$name,
                                   "<br> Type: ", test_data$amenity,
                                   "<br> Website: ", test_data$website,
-                                  "<br> Opening hours: ", test_data$opnng_h),
-                                  #"<br> Adress: ", test_data$adress),
-                                  # could also add who it is for (only men, everyone etc)
+                                  "<br> Opening hours: ", test_data$opnng_h), #,
+                                  # if we had the data, these could be added as well:
+                                  #"<br> Address: ", test_data$address),
+                                  # who it is for (only men, everyone etc)
+                  #) %>%
                    clusterOptions = markerClusterOptions()) %>%
   addLayersControl(
     baseGroups = c("Topo","ESRI Aerial"),
-    overlayGroups = c("Safe spaces"),
-    options = layersControlOptions(collapsed = T))
+    overlayGroups = c("Safe spaces"),# "Safe space density"),
+    options = layersControlOptions(collapsed = T))# %>% 
+  
+  #addMiniMap(tiles = esri[[1]], toggleDisplay = TRUE,
+   #          position = "bottomright"))
 
 test_map
 
