@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 # Load the sf package
-pacman::p_load(pacman, dplyr, sf, leaflet, stringr, htmlwidgets)
+pacman::p_load(pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets)
 
 # set wd
 setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map")
@@ -39,6 +39,7 @@ safespace_crs <- st_transform(test_data, crs = crs_needed)
 ```
 
 
+Final map (still in progress)
 ```{r}
 # define esri
 esri <- grep("^Esri", providers, value = TRUE)
@@ -63,21 +64,93 @@ test_map <- leaflet() %>%
                   #) %>%
                    clusterOptions = markerClusterOptions()) %>%
   
-  # add overlay with safe sapce density - e.g. polygons like here:
-#  addPolygons(data = outline, lng = ~long, lat = ~lat,
-#    fill = F, weight = 2, color = "#FFFFCC", group = ""Safe space density") %>%
+  # add density overlay here
   
   # do the control stuff
   addLayersControl(
     baseGroups = c("Topographic","Aerial"),
-    overlayGroups = c("Safe spaces"),# "Safe space density"),
-    options = layersControlOptions(collapsed = T))#%>% 
+    overlayGroups = c("Safe spaces", "Safe space density"),
+    options = layersControlOptions(collapsed = T))
   
 test_map
 
 # save map
 saveWidget(test_map, "test_map.html", selfcontained = TRUE)
 ```
+
+
+
+Test map w. extra overlays
+```{r}
+# make an overlay test map with the inscriptions:
+
+cities <- as.data.frame(read_csv("http://oxrep.classics.ox.ac.uk/oxrep/docs/Hanson2016/Hanson2016_Cities_OxREP.csv"))
+
+# Convert the table into an sf object on the basis of X and Y columns
+cities_sf <- st_as_sf(cities, coords = c("Longitude (X)", "Latitude (Y)")) # used the function st_as_sf()
+
+plot(cities_sf)
+
+# Define the projection of Lat/Long coordinates as EPSG 4326
+cities_sf4326<- st_set_crs(cities_sf, "+proj=longlat +datum=WGS84") # inserted the ESPG value 4326
+
+# Transform the projection to a 2D projection using EPSG 3035
+cities_sf3035<- st_transform(cities_sf4326, "+proj=longlat +datum=WGS84") # set crs equal to the ESPG value 3035
+
+# Verify the projection is 'projected' not 'geographic'
+st_crs(cities_sf3035) # used the function crs() to check that the projection is indeed "projected" and not "geographic"
+
+
+# Make buffer of 5 km. Check the units of your object to correctly assign value to dist
+safe_space_1km<- st_buffer(st_geometry(safespace_crs), dist = 0.1) # I use the object cities_sf3035 and set the distance to 5000, as I assume the radius measured in meters
+plot(safe_space_1km)
+
+# make convex hull around the safe spaces
+safe_ch <- st_convex_hull(st_union(safespace_crs))
+plot(safe_ch)
+class(safe_ch)
+st_crs(safe_ch)
+
+
+# map it
+test_map_1 <- leaflet() %>%
+  addTiles() %>% 
+  addControl("Queer Travel Map", position = "topleft", className="map-title") %>% 
+  addProviderTiles("Esri.WorldTopoMap", group = "Topographic") %>%
+  addProviderTiles("Esri.WorldImagery", group = "Aerial") %>%
+  
+  # first overlay:
+  addCircleMarkers(data = safespace_crs,
+                   opacity = 0.5, color = "black", stroke = TRUE,
+                   fillOpacity = 0.5, weight=2, fillColor = "purple",
+                   popup = paste0("Name: ", test_data$name,
+                                  "<br> Type: ", test_data$amenity,
+                                  "<br> Website: ", test_data$website,
+                                  "<br> Opening hours: ", test_data$opnng_h),
+                   group = "Safe spaces",
+                   clusterOptions = markerClusterOptions()) %>%
+  
+  # extra test overlay - markers:
+  addCircleMarkers(data = cities_sf3035,
+                   opacity = 0.5, color = "black", stroke = TRUE,
+                   fillOpacity = 0.5, weight=2, fillColor = "purple", 
+                   group = "Safe space density",
+                   clusterOptions = markerClusterOptions()) %>%
+  
+  # add overlay - e.g. polygon like here:
+  addPolygons(data = safe_ch,
+    fill = F, weight = 2, color = "#FFFFCC", group = "Safe space density") %>%
+  
+  # add control things
+  addLayersControl(
+    baseGroups = c("Topographic","Aerial"),
+    overlayGroups = c("Safe spaces", "Safe space density"),
+    options = layersControlOptions(collapsed = T))
+  
+test_map_1
+saveWidget(test_map_1, "test_map_1.html", selfcontained = TRUE)
+```
+
 
 To do:
 make density overlay
@@ -91,9 +164,9 @@ for later:
 - better title
 - fix NA's? 
 
+
+
 TEST STUFF
-
-
 
 ```{r}
 
@@ -169,3 +242,30 @@ test_data$longitude <- str_replace_all(test_data$longitude, "[[:alnum:]\\.],", "
 ```
 [:digit:].[:digit:]
 [:xdigit:].[:xdigit:]
+
+
+```{r}
+# Make buffer of 5 km. Check the units of your object to correctly assign value to dist
+safe_space_1km<- st_buffer(st_geometry(safespace_crs), dist = 0.1) # I use the object cities_sf3035 and set the distance to 5000, as I assume the radius measured in meters
+plot(safe_space_1km)
+
+
+safe_ch <- st_convex_hull(st_union(safespace_crs))
+plot(safe_ch)
+class(safe_ch)
+
+st_crs(safe_ch)
+st_crs(safe_space_1km)
+
+safe_it <- st_intersection(safe_ch, safe_space_1km$geometry) # I use the geometry of safe_space_1km
+
+??st_intersection()
+
+# Dissolve the buffers into a single MULTIPOLYGON buffer feature
+safe_buff <- st_union(safe_it)
+
+
+
+c_buff <- st_transform(c_buff, crs = "+proj=longlat +datum=WGS84")
+
+```
