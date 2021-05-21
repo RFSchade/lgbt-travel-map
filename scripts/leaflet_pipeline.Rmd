@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 # Load the sf package
-pacman::p_load(pacman, dplyr, sf, leaflet, stringr)
+pacman::p_load(pacman, dplyr, sf, leaflet, stringr, htmlwidgets)
 
 # set wd
 setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map")
@@ -26,9 +26,10 @@ plot(st_geometry(test_data))
 # look at the coordinates
 test_data["geometry"]
 
+# check the crs
 st_crs(test_data)
 
-# when looking at the first map (just plotted the map as done in the next code chunk, without the last bit of this chunk) the points were not at the right place - maybe 100 meters to the north east. I also get this error message:
+# when looking at the first map (by running the next code chunk without the last bit of this chunk) the points were not at the right place - maybe 100 meters to the north east. I also got this error message:
 #sf layer has inconsistent datum (+proj=longlat +ellps=intl +towgs84=-86,-98,-119,0,0,0,0 +no_defs).
 #Need '+proj=longlat +datum=WGS84' 
 
@@ -39,20 +40,15 @@ safespace_crs <- st_transform(test_data, crs = crs_needed)
 
 
 ```{r}
-
 # define esri
 esri <- grep("^Esri", providers, value = TRUE)
 
-# is this needed??
-#for (provider in esri) {
- # ruins <- ruins %>% addProviderTiles(provider, group = provider)
-#}
-
 # make map
 test_map <- leaflet() %>%
-  addTiles() %>%
-  addProviderTiles("Esri.WorldTopoMap", group = "Topo") %>%
-  addProviderTiles("Esri.WorldImagery", group = "ESRI Aerial") %>%
+  addTiles() %>% # insert this in the parenthesis: attribution = 'By Rebecca Schade and Sophia Karlson'
+  addControl("Queer Travel Map", position = "topleft", className="map-title") %>% # make this bigger!
+  addProviderTiles("Esri.WorldTopoMap", group = "Topographic") %>%
+  addProviderTiles("Esri.WorldImagery", group = "Aerial") %>%
   addCircleMarkers(data = safespace_crs,
                    opacity = 0.5, color = "black", stroke = TRUE,
                    fillOpacity = 0.5, weight=2, fillColor = "purple",
@@ -63,25 +59,78 @@ test_map <- leaflet() %>%
                                   # if we had the data, these could be added as well:
                                   #"<br> Address: ", test_data$address),
                                   # who it is for (only men, everyone etc)
+                   group = "Safe spaces",#if we don't want the user to be able to not see all the safe spaces, cut this
                   #) %>%
                    clusterOptions = markerClusterOptions()) %>%
-  addLayersControl(
-    baseGroups = c("Topo","ESRI Aerial"),
-    overlayGroups = c("Safe spaces"),# "Safe space density"),
-    options = layersControlOptions(collapsed = T))# %>% 
   
+  # add overlay with safe sapce density - e.g. polygons like here:
+#  addPolygons(data = outline, lng = ~long, lat = ~lat,
+#    fill = F, weight = 2, color = "#FFFFCC", group = ""Safe space density") %>%
+  
+  # do the control stuff
+  addLayersControl(
+    baseGroups = c("Topographic","Aerial"),
+    overlayGroups = c("Safe spaces"),# "Safe space density"),
+    options = layersControlOptions(collapsed = T))#%>% 
+  
+test_map
+
+# save map
+saveWidget(test_map, "test_map.html", selfcontained = TRUE)
+```
+
+To do:
+make density overlay
+how to add overlay and do the groups thing: https://rstudio.github.io/leaflet/showhide.html 
+add legend (but that depends on the kind of density map)
+
+try out bounding boxes
+
+for later: 
+- add legend
+- better title
+- fix NA's? 
+
+TEST STUFF
+
+
+
+```{r}
+
+# other things to maybe add:
   #addMiniMap(tiles = esri[[1]], toggleDisplay = TRUE,
    #          position = "bottomright"))
 
-test_map
+  #addLegend("bottomright", pal = pal, values = ~gdp_md_est,
+   #   title = "Safe spaces",
+    #  labFormat = labelFormat(prefix = "$"),
+     # opacity = 1
+    #))
+    
+
+tag.map.title <- tags$style(HTML("
+  .leaflet-control.map-title { 
+    transform: translate(-50%,20%);
+    position: fixed !important;
+    left: 50%;
+    text-align: center;
+    padding-left: 10px; 
+    padding-right: 10px; 
+    background: rgba(255,255,255,0.75);
+    font-weight: bold;
+    font-size: 28px;
+  }
+"))
+
+title <- tags$div(
+  tag.map.title, HTML("Map title")
+)  
+
+rr <- tags$div(
+   HTML('<a href="https://cran.r-project.org/"> <img border="0" alt="ImageTitle" src="/PathToImage/ImageR.jpeg" width="300" height="100"> </a>')
+ )  
 
 ```
-
-
-
-
-
-TEST STUFF
 
 
 ```{r}
