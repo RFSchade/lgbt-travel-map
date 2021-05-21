@@ -275,4 +275,118 @@ test_df <- read_sf("data/test_data.shp")
 
 ```
 
+## Querying all the nordic countries 
 
+```{r}
+# Defining the bounding box 
+nord_box = c(xmin = -26.0, ymin = 53.9, xmax = 35.5, ymax = 71.7)
+# Turning it into a bbox object
+nord_bb  <- st_bbox(nord_box)
+class(nord_bb)
+# Defining the bbox for the OPenStreetMap request
+nord_q <- opq(bbox = nord_bb, timeout = 180)
+# Defining requests 
+nord_qa <- add_osm_feature(nord_q, key = 'lgbtq',value = 'primary')
+nord_qb <- add_osm_feature(nord_q, key = 'lgbtq',value = 'only')
+nord_qc <- add_osm_feature(nord_q, key = 'lgbtq',value = 'yes')
+nord_qd <- add_osm_feature(nord_q, key = 'gay',value = 'yes')
+nord_qe <- add_osm_feature(nord_q, key = 'gay',value = 'welcome')
+nord_qf <- add_osm_feature(nord_q, key = 'gay',value = 'only')
+# Requesting data 
+lgbtq_primary <- osmdata_sf(nord_qa)
+lgbtq_only <- osmdata_sf(nord_qb)
+lgbtq_yes <- osmdata_sf(nord_qc)
+gay_yes <- osmdata_sf(nord_qd)
+gay_welcome <- osmdata_sf(nord_qe)
+gay_only <- osmdata_sf(nord_qf)
+# Let's see what I cought 
+unique_osmdata(lgbtq_primary)
+unique_osmdata(lgbtq_only)
+unique_osmdata(lgbtq_yes) # The instructions in the wiki said to disregard this, but there was one coded like this anyway
+unique_osmdata(gay_yes)
+unique_osmdata(gay_welcome)
+unique_osmdata(gay_only) # This was the only one that yielded no results 
+
+# Gathering the data 
+nord_safe_spaces <- c(lgbtq_primary,
+                      lgbtq_only, 
+                      lgbtq_yes,
+                      gay_yes, 
+                      gay_welcome)
+# Having a closer look at the safe_spaces object
+class(nord_safe_spaces)
+unique_osmdata(nord_safe_spaces)
+```
+
+### Data cleaning 
+
+```{r}
+# Getting a map of the nordic countries  
+attr(st_geometry(euro_transform), "bbox") <-  st_bbox(nord_box)
+plot(st_geometry(euro_transform))
+
+# Create a bounding box polygon
+nord_graph_box <- st_make_grid(nord_box, n = 1)
+plot(st_geometry(euro_transform));plot(nord_graph_box, add = TRUE)
+
+# Narrowing it down to the nordics 
+sort(unique(euro_transform$NAME_ENGL))
+nord_euro <- euro_transform %>% dplyr::filter(NAME_ENGL %in% c("Denmark", "Norway", "Sweden", "Finland", "Faroes", "Iceland")) # Should I include Greenland?
+plot(st_geometry(nord_euro))
+
+# Removing duplicated geometries
+nord_safe_unique <- unique_osmdata(nord_safe_spaces)
+
+# Change projection
+nord_rpoint <- nord_safe_unique$osm_points %>%
+  st_transform(crs = 4668) 
+
+# Compute centroids of the polygons and store data as points 
+nord_rpoly  <- nord_safe_unique$osm_polygons %>%
+  st_transform(crs = 4668) %>% 
+  st_centroid()
+
+# Merging
+nord_keep <- which(colnames(nord_rpoint) %in% colnames(nord_rpoly)[colnames(nord_rpoly) %in% colnames(nord_rpoint)])
+nord_keep
+nord_keep_names <- colnames(nord_rpoint)[nord_keep]
+nord_keep_names
+nord_rpoint_selected <- nord_rpoint %>% dplyr::select(all_of(nord_keep_names))
+nord_rpoly_selected <- nord_rpoly %>% dplyr::select(all_of(nord_keep_names))
+nord_safe_osm <- rbind(nord_rpoly_selected,nord_rpoint_selected)
+
+# Remove points outside the nordics 
+
+nord_safe_osm_filtered <- st_intersection(nord_safe_osm, (nord_euro %>% st_geometry() %>% st_union()))
+
+# Try plotting?
+plot(st_geometry(euro_transform));plot(st_geometry(nord_safe_osm),col = "red", add = TRUE)
+plot(st_geometry(euro_transform));plot(st_geometry(nord_safe_osm_filtered),col = "red", add = TRUE)
+
+# I was going to do this anyway, but it only got me a couple of more data-points. 
+```
+
+## What happens if I start at "amenities"
+
+```{r}
+# # Defining requests 
+# amenity_q <- add_osm_feature(nord_q, key = 'amenity',value = 'bar')
+# # Requesting data 
+# amenity_a <- osmdata_sf(amenity_q)
+# # Let's see what I cought 
+# unique_osmdata(amenity_a)
+# 
+# amenity_rpoints <- amenity_a$osm_points
+# sort(colnames(amenity_rpoints))
+# 
+# unique(amenity_rpoints$gay) # yes and welcome 
+# unique(amenity_rpoints$gay.men) # yes and only 
+# unique(amenity_rpoints$gay.only) # no
+# unique(amenity_rpoints$gay.transgender) # yes
+# unique(amenity_rpoints$gay.women) # Yes
+# unique(amenity_rpoints$lgbtq) # primary and welcome
+# 
+# lgbt_amenity <- amenity_rpoints %>% filter(gay == "yes" | gay == "welcome" | gay.men == "yes" | gay.men == "only" | gay.transgender == "yes" | gay.women == "yes" | lgbtq == "primary" | lgbtq == "welcome")
+# # This gives me a whole lot fewer data-points and is not worth it. 
+
+```
