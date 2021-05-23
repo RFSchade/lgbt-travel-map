@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 # Load the sf package
-pacman::p_load(pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets)
+pacman::p_load(pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets, raster)
 
 # set wd
 setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map")
@@ -82,7 +82,7 @@ saveWidget(test_map, "test_map.html", selfcontained = TRUE)
 
 Test map w. extra overlays
 ```{r}
-# make an overlay test map with the inscriptions:
+#### for the first overlay with the inscriptions:
 
 cities <- as.data.frame(read_csv("http://oxrep.classics.ox.ac.uk/oxrep/docs/Hanson2016/Hanson2016_Cities_OxREP.csv"))
 
@@ -101,7 +101,8 @@ cities_sf3035<- st_transform(cities_sf4326, "+proj=longlat +datum=WGS84") # set 
 st_crs(cities_sf3035) # used the function crs() to check that the projection is indeed "projected" and not "geographic"
 
 
-# Make buffer of 5 km. Check the units of your object to correctly assign value to dist
+#### For convex hull overlay
+#Make buffer of 5 km. Check the units of your object to correctly assign value to dist
 safe_space_1km<- st_buffer(st_geometry(safespace_crs), dist = 0.1) # I use the object cities_sf3035 and set the distance to 5000, as I assume the radius measured in meters
 plot(safe_space_1km)
 
@@ -112,7 +113,16 @@ class(safe_ch)
 st_crs(safe_ch)
 
 
-# map it
+#### for the raster overlay
+Aster <- raster("data/Aster.tif")
+crs(Aster)
+
+crs(Aster) <- "+proj=longlat +datum=WGS84" 
+plot(Aster)
+
+
+
+#### map it
 test_map_1 <- leaflet() %>%
   addTiles() %>% 
   addControl("Queer Travel Map", position = "topleft", className="map-title") %>% 
@@ -134,17 +144,26 @@ test_map_1 <- leaflet() %>%
   addCircleMarkers(data = cities_sf3035,
                    opacity = 0.5, color = "black", stroke = TRUE,
                    fillOpacity = 0.5, weight=2, fillColor = "purple", 
-                   group = "Safe space density",
+                   group = "More safe spaces",
                    clusterOptions = markerClusterOptions()) %>%
   
   # add overlay - e.g. polygon like here:
   addPolygons(data = safe_ch,
-    fill = F, weight = 2, color = "#FFFFCC", group = "Safe space density") %>%
+              fill = T, weight = 2, color = "purple", 
+              group = "Safe space density") %>%
   
+  # add heatmap
+  #addRasterImage(Aster) %>% 
+  # it doesn't recognize the addHeatmap() function, so it's probably in a package
+  #addHeatmap(map, lng = NULL, lat = NULL, intensity = NULL,
+  #layerId = NULL, group = NULL, minOpacity = 0.05, max = 1,
+  #radius = 25, blur = 15, gradient = NULL, cellSize = NULL,
+  #data = leaflet::getMapData(map)) %>% 
+
   # add control things
   addLayersControl(
     baseGroups = c("Topographic","Aerial"),
-    overlayGroups = c("Safe spaces", "Safe space density"),
+    overlayGroups = c("Safe spaces", "More safe spaces", "Safe space density"),
     options = layersControlOptions(collapsed = T))
   
 test_map_1
@@ -153,9 +172,9 @@ saveWidget(test_map_1, "test_map_1.html", selfcontained = TRUE)
 
 
 To do:
-make density overlay
-how to add overlay and do the groups thing: https://rstudio.github.io/leaflet/showhide.html 
-add legend (but that depends on the kind of density map)
+- make density overlay - as convex hulls around areas with more than x points in y radius from eachother
+- how to add overlay and do the groups thing: https://rstudio.github.io/leaflet/showhide.html 
+- add legend (but that depends on the kind of density map)
 
 try out bounding boxes
 
