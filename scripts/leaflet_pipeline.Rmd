@@ -174,21 +174,45 @@ saveWidget(test_map_1, "test_map_1.html", selfcontained = TRUE)
 
 
 find location feature
+
+UI: user interface
+widget: an application, or a component of an interface, that enables a user to perform a function or access a service
 ```{r}
 library(shiny)
 library(leaflet)
 
-ui <- fluidPage(leafletOutput("map"))
+#https://www.rdocumentation.org/packages/leaflet/versions/2.0.4.1/topics/leafletOutput
+#UI is the user interface. the "map" is the outputId, which is the "output variable to read from"
+ui <- fluidPage(titlePanel("LGBTQ+ Travel Map"), leafletOutput("map")) 
 
 
 server <- function(input, output, session) {
+  
+  # get the coordinates from the center and print them
+  observeEvent(input$map_bounds, {
+    event <- input$map_bounds
 
+    lat <- mean(event$north, event$south)
+    lon <- mean(event$west, event$east)
+
+    #center_coor <- c(lat, lon) # should it be lon, lat, or lat, lon??
+    print(paste0("map center - lat: ", lat, ", lon: ", lon))
+    #print(center_coor)
+    
+  })
+  
+  
+  # map
   output$map <- renderLeaflet({
     leaflet() %>%
       addTiles() %>% # insert this in the parenthesis: attribution = 'By Rebecca Schade and Sophia Karlson'
       addControl("Queer Travel Map", position = "topleft", className="map-title") %>% # make this bigger!
       addProviderTiles("Esri.WorldTopoMap", group = "Topographic") %>%
       addProviderTiles("Esri.WorldImagery", group = "Aerial") %>%
+      
+      # add center marker
+      #addMarkers(data = center_coor) %>% #lng = lon, lat = lat) %>% 
+      
       addCircleMarkers(data = safespace_crs,
                        opacity = 0.5, color = "black", stroke = TRUE,
                        fillOpacity = 0.5, weight=2, fillColor = "purple",
@@ -230,18 +254,18 @@ server <- function(input, output, session) {
             )
           )
         )
-      )
-  })
-
-  observeEvent(input$map_bounds, {
-    event <- input$map_bounds
-
-    lat <- mean(event$north, event$south)
-    lon <- mean(event$west, event$east)
-
-    print(paste0("map center - lat: ", lat, ", lon: ", lon))
-
-  })
+      ) %>% 
+      
+      addMeasure(
+        position = "topleft",
+        primaryLengthUnit = "meters",
+        primaryAreaUnit = "sqmeters",
+        activeColor = "#3D535D",
+        completedColor = "#7D4479",
+        localization = "en")
+    
+        })
+  
 }
 
 shinyApp(ui,server)
@@ -261,6 +285,8 @@ for later:
 - better title
 - fix NA's? 
 
+center cross, pop-up marker for the nearest one (incl distance to it)
+- or find nearest safe space to each chosen location (so not always center)
 
 
 TEST STUFF
@@ -371,7 +397,7 @@ c_buff <- st_transform(c_buff, crs = "+proj=longlat +datum=WGS84")
 library(shiny)
 library(leaflet)
 
-ui <- fluidPage(leafletOutput("map"))
+ui <- fluidPage(titlePanel("Miles Per Gallon"), leafletOutput("map"))
 
 
 server <- function(input, output, session) {
@@ -397,6 +423,47 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui,server)
+```
+
+```{r}
+# NOT RUN {
+# !formatR
+library(shiny)
+app <- shinyApp(
+  ui = fluidPage(titlePanel("LGBTQ+ Travel Map"), leafletOutput('myMap')),
+  server = function(input, output) {
+    map = leaflet() %>% addTiles() %>% setView(-93.65, 42.0285, zoom = 17)
+    output$myMap = renderLeaflet(map)
+  }
+)
+
+# }
+# NOT RUN {
+if (interactive()) app
+# }
+```
+
+```{r}
+# NOT RUN {
+leaf <- leaflet() %>%
+  addTiles() %>%
+  # central park
+  fitBounds( -73.9, 40.75, -73.95, 40.8 ) %>%
+  addMeasure()
+
+leaf
+
+# customizing
+leaf %>% addMeasure(
+  position = "bottomleft",
+  primaryLengthUnit = "meters",
+  primaryAreaUnit = "sqmeters",
+  activeColor = "#3D535D",
+  completedColor = "#7D4479",
+  localization = "de"
+)
+
+# }
 ```
 
 
