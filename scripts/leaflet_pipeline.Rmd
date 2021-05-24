@@ -114,11 +114,11 @@ st_crs(safe_ch)
 
 
 #### for the raster overlay
-Aster <- raster("data/Aster.tif")
-crs(Aster)
+#Aster <- raster("data/Aster.tif")
+#crs(Aster)
 
-crs(Aster) <- "+proj=longlat +datum=WGS84" 
-plot(Aster)
+#crs(Aster) <- "+proj=longlat +datum=WGS84" 
+#plot(Aster)
 
 
 
@@ -149,7 +149,8 @@ test_map_1 <- leaflet() %>%
   
   # add overlay - e.g. polygon like here:
   addPolygons(data = safe_ch,
-              fill = T, weight = 2, color = "purple", 
+              fill = T, weight = 2, color = "purple",
+              popup = paste0("Name: ", "gayboorhood-name"), 
               group = "Safe space density") %>%
   
   # add heatmap
@@ -169,6 +170,83 @@ test_map_1 <- leaflet() %>%
 test_map_1
 saveWidget(test_map_1, "test_map_1.html", selfcontained = TRUE)
 ```
+
+
+
+find location feature
+```{r}
+library(shiny)
+library(leaflet)
+
+ui <- fluidPage(leafletOutput("map"))
+
+
+server <- function(input, output, session) {
+
+  output$map <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>% # insert this in the parenthesis: attribution = 'By Rebecca Schade and Sophia Karlson'
+      addControl("Queer Travel Map", position = "topleft", className="map-title") %>% # make this bigger!
+      addProviderTiles("Esri.WorldTopoMap", group = "Topographic") %>%
+      addProviderTiles("Esri.WorldImagery", group = "Aerial") %>%
+      addCircleMarkers(data = safespace_crs,
+                       opacity = 0.5, color = "black", stroke = TRUE,
+                       fillOpacity = 0.5, weight=2, fillColor = "purple",
+                       popup = paste0("Name: ", test_data$name,
+                                      "<br> Type: ", test_data$amenity,
+                                      "<br> Website: ", test_data$website,
+                                      "<br> Opening hours: ", test_data$opnng_h), #,
+                                      # if we had the data, these could be added as well:
+                                      #"<br> Address: ", test_data$address),
+                                      # who it is for (only men, everyone etc)
+                       group = "Safe spaces",#if we don't want the user to be able to not see all the safe spaces, cut this
+                      #) %>%
+                       clusterOptions = markerClusterOptions()) %>%
+      
+      # add density overlay here - e.g. polygons like here:
+      addPolygons(data = safe_ch,
+                  fill = T, weight = 2, color = "purple",
+                  popup = paste0("Name: ", "gayboorhood-name"), 
+                  group = "Safe space density") %>%
+      
+      # do the control stuff
+      addLayersControl(
+        baseGroups = c("Topographic","Aerial"),
+        overlayGroups = c("Safe spaces", "Safe space density"),
+        options = layersControlOptions(collapsed = T)) %>% 
+
+    #leaflet() %>%
+     # addProviderTiles(providers$Stamen.TonerLite,
+      #                 options = providerTileOptions(noWrap = TRUE)) %>%
+
+      addEasyButton(
+        easyButton(
+          position = "topleft",
+          icon = "fa-crosshairs",
+          title = "Locate Me",
+          onClick = JS(
+            c(
+              "function(btn,  map){map.locate({setView:true,enableHighAccuracy: true })}"
+            )
+          )
+        )
+      )
+  })
+
+  observeEvent(input$map_bounds, {
+    event <- input$map_bounds
+
+    lat <- mean(event$north, event$south)
+    lon <- mean(event$west, event$east)
+
+    print(paste0("map center - lat: ", lat, ", lon: ", lon))
+
+  })
+}
+
+shinyApp(ui,server)
+```
+
 
 
 To do:
@@ -288,3 +366,37 @@ safe_buff <- st_union(safe_it)
 c_buff <- st_transform(c_buff, crs = "+proj=longlat +datum=WGS84")
 
 ```
+
+```{r}
+library(shiny)
+library(leaflet)
+
+ui <- fluidPage(leafletOutput("map"))
+
+
+server <- function(input, output, session) {
+
+ output$map <- renderLeaflet({
+ leaflet() %>%
+  addProviderTiles(providers$Stamen.TonerLite,
+                   options = providerTileOptions(noWrap = TRUE)) %>%
+
+  addEasyButton(
+    easyButton(
+      position = "topleft",
+      icon = "fa-crosshairs",
+      title = "Locate Me",
+      onClick = JS(
+        c(
+          "function(btn,  map){map.locate({setView:true,enableHighAccuracy: true })}"
+        )
+      )
+    )
+      )
+  })
+}
+
+shinyApp(ui,server)
+```
+
+
