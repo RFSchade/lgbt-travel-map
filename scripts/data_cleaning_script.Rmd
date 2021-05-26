@@ -150,6 +150,7 @@ unique_osmdata(guiana_gay_only)
 ## Cleaning the data
 ### Creating a map of countries in the EEA (+ Switzerland)
 While the main visualizations are made in leaflet, this is useful for quick illustrations and subsetting data. 
+The map is made with data from © EuroGeographics for the administrative boundaries. 
 
 ```{r}
 # loading data from eurostat 
