@@ -8,7 +8,7 @@ ui <- fluidPage(titlePanel("LGBTQ+ Travel Map"), leafletOutput("map"))
 
 server <- function(input, output, session) {
   
-  center_coor <- c()
+  #center_coor <- c()
   
   # get the coordinates from the center and print them
   observeEvent(input$map_bounds, {
@@ -21,6 +21,8 @@ server <- function(input, output, session) {
     print(paste0("map center - lat: ", lat, ", lon: ", lon))
     #print(center_coor)
     print(center_coor)
+    
+    return(center_coor)
   })
   
   
@@ -81,8 +83,8 @@ server <- function(input, output, session) {
       ) %>% 
       
       addMarkers(
-        lng = coor$Longitude, 
-        lat = coor$Latitude,
+        lng = center_coor[1], 
+        lat = center_coor[1],
         popup = paste("You are here!")) %>% 
       
       addMeasure(

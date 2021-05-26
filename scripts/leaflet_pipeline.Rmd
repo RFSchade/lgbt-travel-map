@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 # Load the sf package
-pacman::p_load(pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets, raster)
+pacman::p_load(pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets, raster, shiny)
 
 # set wd
 setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map")
@@ -39,7 +39,7 @@ safespace_crs <- st_transform(test_data, crs = crs_needed)
 ```
 
 
-Final map (still in progress)
+leaflet map (still in progress - and without shiny)
 ```{r}
 # define esri
 esri <- grep("^Esri", providers, value = TRUE)
@@ -173,7 +173,7 @@ saveWidget(test_map_1, "test_map_1.html", selfcontained = TRUE)
 
 
 
-find location feature
+Shiny - find location and nearest safe space feature
 
 UI: user interface
 widget: an application, or a component of an interface, that enables a user to perform a function or access a service
@@ -183,23 +183,42 @@ library(leaflet)
 
 #https://www.rdocumentation.org/packages/leaflet/versions/2.0.4.1/topics/leafletOutput
 #UI is the user interface. the "map" is the outputId, which is the "output variable to read from"
-ui <- fluidPage(titlePanel("LGBTQ+ Travel Map"), leafletOutput("map")) 
+ui <- fluidPage(
+  titlePanel("LGBTQ+ Travel Map"), 
+  leafletOutput("map"), 
+  p(),
+  actionButton("recalc", "New points")) 
 
 
 server <- function(input, output, session) {
   
+  points <- eventReactive(input$recalc, {
+    cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
+  }, ignoreNULL = FALSE)
+
   # get the coordinates from the center and print them
-  observeEvent(input$map_bounds, {
-    event <- input$map_bounds
-
-    lat <- mean(event$north, event$south)
-    lon <- mean(event$west, event$east)
-
-    #center_coor <- c(lat, lon) # should it be lon, lat, or lat, lon??
-    print(paste0("map center - lat: ", lat, ", lon: ", lon))
+  #center_coor <- eventReactive(input$map_center, {#input$map_bounds, { #observeEvent
+  #  event <- input$map_center#bounds
+  #  lat <- event$lat
+  #  lon <- event$lng
+    #lat <- mean(event$north, event$south)
+    #lon <- mean(event$west, event$east)
+    #return(c(lat, lon))#event$lat, event$lng input$map_center["lat"], input$map_center["lng"]
+    #print(paste0("map center - lat: ", lat, ", lon: ", lon))
     #print(center_coor)
-    
-  })
+    #return(center_coor)
+ # })
+  #print(center_coor)
+  
+  #click_coor <- eventReactive(input$map_click, {# doesn't work with eventReactive
+   # cbind(input$map_click[1], input$map_click[2])#click_coor <- c
+    #cbind(input$map_click[1], input$map_click[2])
+    #click <- input$map_click
+    #print(paste0("click is: ", click[1]))
+    #lat <- click$lat
+    #lon <- click$lng
+    #print(paste0("click - lat: ", lat, ", lon: ", lon))
+  #}, ignoreNULL = FALSE)
   
   
   # map
@@ -220,29 +239,24 @@ server <- function(input, output, session) {
                                       "<br> Type: ", test_data$amenity,
                                       "<br> Website: ", test_data$website,
                                       "<br> Opening hours: ", test_data$opnng_h), #,
-                                      # if we had the data, these could be added as well:
-                                      #"<br> Address: ", test_data$address),
-                                      # who it is for (only men, everyone etc)
+                       # if we had the data, these could be added as well:
+                       #"<br> Address: ", test_data$address),
+                       # who it is for (only men, everyone etc)
                        group = "Safe spaces",#if we don't want the user to be able to not see all the safe spaces, cut this
-                      #) %>%
+                       #) %>%
                        clusterOptions = markerClusterOptions()) %>%
       
       # add density overlay here - e.g. polygons like here:
       addPolygons(data = safe_ch,
                   fill = T, weight = 2, color = "purple",
-                  popup = paste0("Name: ", "gayboorhood-name"), 
-                  group = "Safe space density") %>%
+                  popup = paste0("This is a gayborhood!"), 
+                  group = "Gayborhoods") %>%
       
-      # do the control stuff
-      addLayersControl(
-        baseGroups = c("Topographic","Aerial"),
-        overlayGroups = c("Safe spaces", "Safe space density"),
-        options = layersControlOptions(collapsed = T)) %>% 
-
-    #leaflet() %>%
-     # addProviderTiles(providers$Stamen.TonerLite,
+      
+      #leaflet() %>%
+      # addProviderTiles(providers$Stamen.TonerLite,
       #                 options = providerTileOptions(noWrap = TRUE)) %>%
-
+      
       addEasyButton(
         easyButton(
           position = "topleft",
@@ -256,21 +270,33 @@ server <- function(input, output, session) {
         )
       ) %>% 
       
+      addMarkers(
+        #data = points,
+        lng = 12.5224416,#center_coor[1], mean(event$north, event$south),#click_coor[1]
+        lat = 55.6852398,#center_coor[1],click_coor[1]
+        # if we want another icon, we can use makeIcon https://rstudio.github.io/leaflet/markers.html 
+        popup = paste("You are here!"), 
+        group = "My location") %>% 
+      
       addMeasure(
         position = "topleft",
         primaryLengthUnit = "meters",
         primaryAreaUnit = "sqmeters",
         activeColor = "#3D535D",
         completedColor = "#7D4479",
-        localization = "en")
+        localization = "en") %>% 
     
-        })
+    # do the control stuff
+      addLayersControl(
+        baseGroups = c("Topographic","Aerial"),
+        overlayGroups = c("Safe spaces", "Gayborhoods", "My location"),
+        options = layersControlOptions(collapsed = T))
+  })
   
 }
 
 shinyApp(ui,server)
 ```
-
 
 
 To do:
@@ -287,6 +313,8 @@ for later:
 
 center cross, pop-up marker for the nearest one (incl distance to it)
 - or find nearest safe space to each chosen location (so not always center)
+
+
 
 
 TEST STUFF
@@ -466,4 +494,34 @@ leaf %>% addMeasure(
 # }
 ```
 
+```{r}
+library(shiny)
+library(leaflet)
+
+r_colors <- rgb(t(col2rgb(colors()) / 255))
+names(r_colors) <- colors()
+
+ui <- fluidPage(
+  leafletOutput("mymap"),
+  p(),
+  actionButton("recalc", "New points")
+)
+
+server <- function(input, output, session) {
+
+  points <- eventReactive(input$recalc, {
+    cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
+  }, ignoreNULL = FALSE)
+
+  output$mymap <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles(providers$Stamen.TonerLite,
+        options = providerTileOptions(noWrap = TRUE)
+      ) %>%
+      addMarkers(data = points())
+  })
+}
+
+shinyApp(ui, server)
+```
 
