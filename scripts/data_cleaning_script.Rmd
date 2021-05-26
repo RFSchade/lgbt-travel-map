@@ -1,6 +1,6 @@
 ---
 title: "Data Cleaning Script"
-author: "Rebecca Folmer Schade & Sophia "
+author: "Rebecca Folmer Schade & Sophia Kleist Karlson"
 date: "2021-05-11 updated 2021-05-26"
 output: html_document
 ---
