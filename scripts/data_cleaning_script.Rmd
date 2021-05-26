@@ -1,7 +1,7 @@
 ---
 title: "Data Cleaning Script"
 author: "Rebecca Folmer Schade & Sophia "
-date: "2021-05-11 updated `r format(Sys.time(), '%B %d, %Y')`"
+date: "2021-05-11 updated 2021-05-26"
 output: html_document
 ---
 
@@ -12,17 +12,16 @@ knitr::opts_knit$set(root.dir = "..")
 
 ## Loading packages 
 ```{r}
-# install.packages("osmdata")
+# Quick install/load of all used packages
+# install.packages("pacman")
+# pacman::p_load(pacman, osmdata, sf, tidyverse, raster)
 library(osmdata)
 library(sf)
 library(tidyverse)
 library(raster)
-# install.packages(c("httr", "jsonlite"))
-library(httr)
-library(jsonlite)
 ```
 # Data gathering and cleaning 
-In this script, data on LGBT+ friendly amenities in the European Economic Area (EEA) and Switzerland is gathered from Open Street Maps and cleaned for use in the Leaflet visualisation.
+In this script, data on LGBT+ friendly amenities in the European Economic Area (EEA) and Switzerland is gathered from Open Street Maps and cleaned for use in the Leaflet visualization.
 
 ## Querying data from Open street maps
 ### Creating bounding boxes
@@ -38,10 +37,11 @@ guiana_box <- c(xmin = -63.19, ymin = -0.33, xmax = -50.13, ymax = 9.59)
 ```
 
 ### Querying the data
-Data is queried withing the three bounding boxes that contain the keys gay= and lgbtq= with all accosiated values indicating that the location is lgbt+ friendly (gay=yes/welcome/only and lgbtq=primary/only/yes). Though the wiki for the lgbtq key discourages the use of lgbtq=yes, it still queried as some data was coded as such [(link here, last read 2021-05-25)](https://wiki.openstreetmap.org/wiki/Key:lgbtq). 
+Data is queried withing the three bounding boxes that contain the keys gay= and lgbtq= with all associated values indicating that the location is lgbt+ friendly (gay=yes/welcome/only and lgbtq=primary/only/yes). Though the wiki for the lgbtq key discourages the use of lgbtq=yes, it still queried as some data was coded as such [(link here, last read 2021-05-25)](https://wiki.openstreetmap.org/wiki/Key:lgbtq).  
+
+*Europe (with the exception of Greenland and French Guiana)*  
 
 ```{r}
-#===> Europe (with the exception of Greenland and French Guiana) 
 # Turning 'box' into a bbox object
 EEA_bb  <- st_bbox(box)
 class(EEA_bb)
@@ -81,8 +81,11 @@ EEA_safe_spaces <- c(lgbtq_primary,
 class(EEA_safe_spaces)
 unique_osmdata(EEA_safe_spaces)
 # > The object contains not only points and polygons, but also lines and multipolygons, which is unexpected. 
+```
 
-#===> Greenland 
+*Greenland*  
+
+```{r}
 # Turning 'greenland_box' into a bbox object
 greenland_bb  <- st_bbox(greenland_box)
 class(greenland_bb)
@@ -110,8 +113,11 @@ unique_osmdata(greenland_gay_yes)
 unique_osmdata(greenland_gay_welcome)
 unique_osmdata(greenland_gay_only) 
 # > No datapoints were found
+```
 
-#===> French Guiana
+*French Guiana*
+
+```{r}
 # Turning 'guiana_box' into a bbox object
 guiana_bb  <- st_bbox(guiana_box)
 class(guiana_bb)
@@ -238,8 +244,8 @@ EEA_line_select
 world_transform
 ```
 
-## Selecting important variables
-As the lines and multypoligons were unexpected, they are saved separetly for now. 
+### Selecting important variables
+Not all of the variables in the dataset from OSM are useful for our visualization - here we remove the irrelevant ones. 
 
 ```{r}
 # Removing unneeded variables
@@ -251,11 +257,11 @@ names(EEA_rmultipoly)
 EEA_multipoly_select <- EEA_rmultipoly %>% dplyr::select(osm_id, name, amenity)
 ```
 
-## Cleaning variables 
+### Cleaning variables 
 As these variables will be used in the visualization, they should be made a little prettier to look at. 
 
 ```{r}
-#===> Cleaning EEA_point_select <===#
+#=====> Cleaning EEA_point_select <=====#
 #===> Cleaning $name
 unique(EEA_point_select$name)
 # > I identified three issues: The translation of special characters, some entries with small first letters, and the use of quetation marks. 
@@ -285,7 +291,7 @@ unique(EEA_point_select$website)
 # > Probably best not to mess with this - there does not seem to be any obvious issues
 ```
 ## Saving data 
-As the lines and multypoligons were unexpected, they are saved separetly for now. 
+As the lines and multypoligons were unexpected, they are saved separately for now.
 
 ```{r}
 # Saving data in the data folder 
