@@ -1,7 +1,7 @@
 ---
 title: "Data Cleaning Script"
-author: "Rebecca Folmer Schade"
-date: "11 maj 2021"
+author: "Rebecca Folmer Schade & Sophia Kleist Karlson"
+date: "2021-05-11 updated 2021-05-26"
 output: html_document
 ---
 
@@ -12,399 +12,37 @@ knitr::opts_knit$set(root.dir = "..")
 
 ## Loading packages 
 ```{r}
-# install.packages("osmdata")
+# Quick install/load of all used packages
+# install.packages("pacman")
+# pacman::p_load(pacman, osmdata, sf, tidyverse, raster)
 library(osmdata)
 library(sf)
 library(tidyverse)
 library(raster)
-# install.packages(c("httr", "jsonlite"))
-library(httr)
-library(jsonlite)
 ```
+# Data gathering and cleaning 
+In this script, data on LGBT+ friendly amenities in the European Economic Area (EEA) and Switzerland is gathered from Open Street Maps and cleaned for use in the Leaflet visualization.
 
-## Creating bounding box
-
-## Let's try that again 
-This time I am using data from Euro.stat - These can't be used for comercial purposes, so we might have to change the license on our github page 
+## Querying data from Open street maps
+### Creating bounding boxes
+Because of the scattering of European territories, the data will be queried within three bounding boxes - one containing most of Europe, one containing the Danish territory Greenland, and one containing the French territory French Guiana.
 
 ```{r}
-# Trying to get the data from the API
-res_meta <-  GET("https://gisco-services.ec.europa.eu/distribution/v2/countries/datasets.json")
-res <- GET("https://gisco-services.ec.europa.eu/distribution/v2/countries/countries-2020-files.json")
-res
-
-rawToChar(res$content)
-data <-  fromJSON(rawToChar(res$content))
-names(data)
-data$shp$CNTR_BN_01M_2020_4326_COASTL.shp.zip
-
-res_2 <- GET("https://gisco-services.ec.europa.eu/distribution/v2/countries/countries-2020-files.json",
-                    query = list())
-
-  
-rawToChar(res$content)
-
-# Figured out how to download a zip file instead
-euro_geo <- st_read("data/CNTR_RG_01M_2020_3035.shp/CNTR_RG_01M_2020_3035.shp")
-head(euro_geo)
-
-# Let's try plotting the data 
-plot(st_geometry(euro_geo))
-
-# > This is not working either. I will have to come back to it later. 
-
-# Trying to re-project map to EPSG:4668
-crs(euro_geo, asText = TRUE)
-
-# Try to transform
-euro_transform <- st_transform(euro_geo, crs = 4668)
-
-
-# Let's try plotting the data 
-head(euro_transform)
-plot(st_geometry(euro_transform))
-
-
-box = c(xmin = 1.4, ymin = 53.1, xmax = 35.2, ymax = 72.2)
-pol = st_sfc(st_buffer(st_point(c(.5, .5)), .6))
-plot(pol)
-pol_sf = st_sf(a=1, geom=pol)
-plot(pol_sf)
-plot(st_crop(pol, box))
-plot(st_crop(pol_sf, st_bbox(box)))
-# alternative:
-st_crop(st_geometry(euro_transform), st_bbox(box))
-plot(st_crop(st_geometry(euro_transform), st_bbox(box)))
-class(euro_tranform)
-class(pol_sf)
-plot(euro_transform)
-
-
-
-attr(st_geometry(euro_transform), "bbox") <-  st_bbox(box)
-plot(st_geometry(euro_transform))
-
-# Create a bounding box polygon
-graph_box <- st_make_grid(box, n = 1)
-
-plot(st_geometry(euro_transform));plot(graph_box, add = TRUE)
-
-# Narrowing it down to scandenavia 
-sort(unique(euro_transform$NAME_ENGL))
-scand_euro <- euro_transform %>% dplyr::filter(NAME_ENGL %in% c("Denmark", "Norway", "Sweden"))
-plot(st_geometry(scand_euro))
-
-```
-
-This link is important: https://boundingbox.klokantech.com/
-
-This was a lot of hoops to jump through just to get a bounding box. 
-
-## Getting point data from open street maps
-Use:
-
-* `osmdata::opq()` to define the bounding box of the osm request
-* `osmdata::add_osm_feature()` to define the key:value pairs you are looking for
-* `osmdata::osmdata_sf()` to retrieve the osm data.
-
-```{r}
-# Create a bounding box
-bb  <- st_bbox(box)
-q <- opq(bbox = bb,timeout = 180)
-qa  <- add_osm_feature(q, key = 'lgbtq',value = 'primary')
-df <- osmdata_sf(qa)
-class(df)
-unique_osmdata(df)
-
-# > Ok - I think I've got the general idea, but I will have to continue later. 
-
-lgbt_points <- df$osm_points
-lgbt_polygon <- df$osm_polygons
-
-# From exploration of the data, I can see that there are many columns with what appears to be important NA's. Also, the amount of entries are limited.
-
-#=====> Trying to look at some of the other tags 
-
-# Create a bounding box
-bb  <- st_bbox(box)
-q <- opq(bbox = bb,timeout = 180)
-qa2  <- add_osm_feature(q, key = 'gay',value = 'yes')
-df2<- osmdata_sf(qa2)
-class(df2)
-unique_osmdata(df2)
-# A-HA! Dice!
-gay_points <- df2$osm_points
-gay_polygon <- df2$osm_polygons
-gay_points$osm_id %in% lgbt_points$osm_id
-# While some of the points overlap, some are new. 
-
-# Create a bounding box
-bb  <- st_bbox(box)
-q <- opq(bbox = bb,timeout = 180)
-qa3  <- add_osm_feature(q, key = 'gay',value = 'welcome')
-df3<- osmdata_sf(qa3)
-class(df3)
-unique_osmdata(df3)
-# A-HA! More dice! 
-gay2_points <- df3$osm_points
-gay2_polygons <- df3$osm_polygons
-gay2_points$osm_id %in% gay_points$osm_id
-# And all these are new places too!
-
-# This is what I could find in this region. 
-
-# I want to check if it is because there aren't any hits in scandenavia
-world_box <- c(xmin = -179.9, ymin = -80.8, xmax = 179.0, ymax = 84.9)
-world_bb  <- st_bbox(world_box)
-world_q <- opq(bbox = world_bb, timeout = 180)
-world_qa  <- add_osm_feature(world_q, key = 'lgbtq:women',value = 'primary')
-world_df<- osmdata_sf(world_qa)
-class(world_df)
-unique_osmdata(world_df)
-world_df$osm_points
-# Looks like I was correct. There are definetly hits in other places. 
-```
-
-## Clean downloading of data
-
-```{r}
-# Defining the bounding box 
-box = c(xmin = 1.4, ymin = 53.1, xmax = 35.2, ymax = 72.2)
-# Turning it into a bbox object
-bb  <- st_bbox(box)
-class(bb)
-# Defining the bbox for the OPenStreetMap request
-q <- opq(bbox = bb, timeout = 180)
-# Defining requests 
-qa <- add_osm_feature(q, key = 'lgbtq',value = 'primary')
-qb <- add_osm_feature(q, key = 'gay',value = 'yes')
-qc <- add_osm_feature(q, key = 'gay',value = 'welcome')
-# Requesting data 
-lgbtq_primary <- osmdata_sf(qa)
-gay_yes <- osmdata_sf(qb)
-gay_welcome <- osmdata_sf(qc)
-# Gathering the data 
-safe_spaces <- c(lgbtq_primary,
-                 gay_yes, 
-                 gay_welcome)
-# Having a closer look at the safe_spaces object
-class(safe_spaces)
-unique_osmdata(safe_spaces)
-```
-
-Should I, for reproduceability, show that I requested all possible combinations of keys and values for these two tags? 
-
-## Cleaning data (preliminary) 
-
-```{r}
-# Removing duplicated geometries
-safe_unique <- unique_osmdata(safe_spaces)
-
-# Change projection
-rpoint <- safe_unique$osm_points %>%
-  st_transform(crs = 4668) 
-
-# Compute centroids of the polygons and store data as points 
-rpoly  <- safe_unique$osm_polygons %>%
-  st_transform(crs = 4668) %>% 
-  st_centroid()
-
-# Merging
-keep <- which(colnames(rpoint) %in% colnames(rpoly)[colnames(rpoly) %in% colnames(rpoint)])
-keep
-keep_names <- colnames(rpoint)[keep]
-keep_names
-rpoint_selected <- rpoint %>% dplyr::select(all_of(keep_names))
-rpoly_selected <- rpoly %>% dplyr::select(all_of(keep_names))
-safe_osm <- rbind(rpoly_selected,rpoint_selected)
-
-# Remove points outside scandenavia 
-
-safe_osm_filtered <- st_intersection(safe_osm, (scand_euro %>% st_geometry() %>% st_union()))
-
-# Try plotting?
-plot(st_geometry(euro_transform));plot(st_geometry(safe_osm),col = "red", add = TRUE)
-plot(st_geometry(euro_transform));plot(st_geometry(safe_osm_filtered),col = "red", add = TRUE)
-# 
-   
-# 
-# baths_osm <- st_intersection(baths_osm, st_transform(suburbs, 32632) %>% st_geometry() %>% st_union())
-# 
-# # transform also historical baths 
-# baths_cph <- wc_spatial%>% 
-#   st_centroid() %>% 
-#   st_transform(32632) %>% 
-#   mutate(radius = sqrt(bath_per_km)) %>% 
-#   arrange(desc(bath_per_km))
-```
-
-## Saving data 
-
-```{r}
-# Saving data in the data folder 
-st_write(safe_osm_filtered, "data/test_data.shp")
-# Checking if it worked 
-test_df <- read_sf("data/test_data.shp")
-# >  It did :-) 
-
-```
-
-## Querying all the nordic countries 
-
-```{r}
-# Defining the bounding box 
-nord_box = c(xmin = -26.0, ymin = 53.9, xmax = 35.5, ymax = 71.7)
-# Turning it into a bbox object
-nord_bb  <- st_bbox(nord_box)
-class(nord_bb)
-# Defining the bbox for the OPenStreetMap request
-nord_q <- opq(bbox = nord_bb, timeout = 180)
-# Defining requests 
-nord_qa <- add_osm_feature(nord_q, key = 'lgbtq',value = 'primary')
-nord_qb <- add_osm_feature(nord_q, key = 'lgbtq',value = 'only')
-nord_qc <- add_osm_feature(nord_q, key = 'lgbtq',value = 'yes')
-nord_qd <- add_osm_feature(nord_q, key = 'gay',value = 'yes')
-nord_qe <- add_osm_feature(nord_q, key = 'gay',value = 'welcome')
-nord_qf <- add_osm_feature(nord_q, key = 'gay',value = 'only')
-# Requesting data 
-lgbtq_primary <- osmdata_sf(nord_qa)
-lgbtq_only <- osmdata_sf(nord_qb)
-lgbtq_yes <- osmdata_sf(nord_qc)
-gay_yes <- osmdata_sf(nord_qd)
-gay_welcome <- osmdata_sf(nord_qe)
-gay_only <- osmdata_sf(nord_qf)
-# Let's see what I cought 
-unique_osmdata(lgbtq_primary)
-unique_osmdata(lgbtq_only)
-unique_osmdata(lgbtq_yes) # The instructions in the wiki said to disregard this, but there was one coded like this anyway
-unique_osmdata(gay_yes)
-unique_osmdata(gay_welcome)
-unique_osmdata(gay_only) # This was the only one that yielded no results 
-
-# Gathering the data 
-nord_safe_spaces <- c(lgbtq_primary,
-                      lgbtq_only, 
-                      lgbtq_yes,
-                      gay_yes, 
-                      gay_welcome)
-# Having a closer look at the safe_spaces object
-class(nord_safe_spaces)
-unique_osmdata(nord_safe_spaces)
-```
-
-### Data cleaning 
-
-```{r}
-# Getting a map of the nordic countries  
-attr(st_geometry(euro_transform), "bbox") <-  st_bbox(nord_box)
-plot(st_geometry(euro_transform))
-
-# Create a bounding box polygon
-nord_graph_box <- st_make_grid(nord_box, n = 1)
-plot(st_geometry(euro_transform));plot(nord_graph_box, add = TRUE)
-
-# Narrowing it down to the nordics 
-sort(unique(euro_transform$NAME_ENGL))
-nord_euro <- euro_transform %>% dplyr::filter(NAME_ENGL %in% c("Denmark", "Norway", "Sweden", "Finland", "Faroes", "Iceland")) # Should I include Greenland?
-plot(st_geometry(nord_euro))
-
-# Removing duplicated geometries
-nord_safe_unique <- unique_osmdata(nord_safe_spaces)
-
-# Change projection
-nord_rpoint <- nord_safe_unique$osm_points %>%
-  st_transform(crs = 4668) 
-
-# Compute centroids of the polygons and store data as points 
-nord_rpoly  <- nord_safe_unique$osm_polygons %>%
-  st_transform(crs = 4668) %>% 
-  st_centroid()
-
-# Merging
-nord_keep <- which(colnames(nord_rpoint) %in% colnames(nord_rpoly)[colnames(nord_rpoly) %in% colnames(nord_rpoint)])
-nord_keep
-nord_keep_names <- colnames(nord_rpoint)[nord_keep]
-nord_keep_names
-nord_rpoint_selected <- nord_rpoint %>% dplyr::select(all_of(nord_keep_names))
-nord_rpoly_selected <- nord_rpoly %>% dplyr::select(all_of(nord_keep_names))
-nord_safe_osm <- rbind(nord_rpoly_selected,nord_rpoint_selected)
-
-# Remove points outside the nordics 
-
-nord_safe_osm_filtered <- st_intersection(nord_safe_osm, (nord_euro %>% st_geometry() %>% st_union()))
-
-# Try plotting?
-plot(st_geometry(euro_transform));plot(st_geometry(nord_safe_osm),col = "red", add = TRUE)
-plot(st_geometry(euro_transform));plot(st_geometry(nord_safe_osm_filtered),col = "red", add = TRUE)
-
-# I was going to do this anyway, but it only got me a couple of more data-points. 
-```
-
-
-# Onle last time, and this time I do it properly
-
-## Creating a map if countries in the EEA 
-While the main visualizations are made in leaflet, this is useful for quick illustrations and subsetting data 
-
-```{r}
-# loading data from eurostat 
-world_geo <- st_read("data/CNTR_RG_01M_2020_3035.shp/CNTR_RG_01M_2020_3035.shp")
-head(world_geo)
-
-# Let's try plotting the data 
-plot(st_geometry(euro_geo))
-
-# Re-projecting map to EPSG:4668 - a 2D map is easier for visualization purposes
-world_transform <- st_transform(world_geo, crs = 4668)
-
-# Let's try plotting the data - again
-plot(st_geometry(world_transform))
-
-# Creating a list of countries that are members of the EEA 
-EEA_members <- c("Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Norway", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland", "Turkey")
-# > List was taken from https://www.eionet.europa.eu/countries (2021-05-21)
-
-# Checking to see if Anything was overlooked in this list 
-sort(unique(world_transform$NAME_ENGL))
-# > Though a part of the Danish Commonwealth, Greenland and the Faroes have their own entries in the dataset 
-
-# Adding the Faroes to the list 
-EEA_members <- c(EEA_members, "Faroes", "Greenland")
-EEA_members
-
-# Checking that all countries in the EEA_members list are present in the dataset 
-EEA_members %in% world_transform$NAME_ENGL
-
-# Creating a map only with the countries in the EEA for subsetting data later on
-EEA_geo <- world_transform %>% dplyr::filter(NAME_ENGL %in% EEA_members)
-
-# Showing EEA territories in a plot 
-plot(st_geometry(world_transform));plot(st_geometry(EEA_geo), col = "red", fil = "red", add = TRUE)
-# > These territories are a bit scattered - for the quick visualizations, I will focus mostly on those in Central Europe
-# > French Guiana in South America makes my job difficult  
-
-# Setting the bounding box to one more focused on Europe
+# Bounding box for most of Europe
 box = c(xmin = -28.3, ymin = 31.1, xmax = 45.7, ymax = 71.7)
-attr(st_geometry(world_transform), "bbox") <-  st_bbox(box)
-plot(st_geometry(world_transform))
-
-# Create a bounding box polygon to illustrate the bounding box
-graph_box <- st_make_grid(box, n = 1)
-plot(st_geometry(world_transform));plot(graph_box, add = TRUE)
-
-# Creating a separate bounding box for Greenland
+# Bounding box for Greenland 
 greenland_box <- c(xmin = -76.6, ymin = 57.3, xmax = -9.0, ymax = 84.0)
-# > Working with Greenland in the same map as the rest of Europe becomes difficult because of the size and loaction of the country - for this reason, I am separating it from the rest of the countries
-
-# Creating a map with only Greenland
-greenland_geo <- world_transform %>% filter(NAME_ENGL == "Greenland")
-plot(st_geometry(greenland_geo))
+# Bounging box for French Guiana
+guiana_box <- c(xmin = -63.19, ymin = -0.33, xmax = -50.13, ymax = 9.59)
 ```
 
-## Querying data for the EEA  
+### Querying the data
+Data is queried withing the three bounding boxes that contain the keys gay= and lgbtq= with all associated values indicating that the location is lgbt+ friendly (gay=yes/welcome/only and lgbtq=primary/only/yes). Though the wiki for the lgbtq key discourages the use of lgbtq=yes, it still queried as some data was coded as such [(link here, last read 2021-05-25)](https://wiki.openstreetmap.org/wiki/Key:lgbtq).  
+
+*Europe (with the exception of Greenland and French Guiana)*  
 
 ```{r}
-# Turning it into a bbox object
+# Turning 'box' into a bbox object
 EEA_bb  <- st_bbox(box)
 class(EEA_bb)
 # Defining the bbox for the OPenStreetMap request
@@ -417,16 +55,18 @@ EEA_qd <- add_osm_feature(EEA_q, key = 'gay',value = 'yes')
 EEA_qe <- add_osm_feature(EEA_q, key = 'gay',value = 'welcome')
 EEA_qf <- add_osm_feature(EEA_q, key = 'gay',value = 'only')
 # Requesting data 
+# (as querying the data all at once seemed to cause trouble with the limit of requests for one's IP adress, data associated with different keys and values is queried separately)
+# (This is time consuming, but at least it works if you wait a little inbetween requests)
 lgbtq_primary <- osmdata_sf(EEA_qa)
 lgbtq_only <- osmdata_sf(EEA_qb)
 lgbtq_yes <- osmdata_sf(EEA_qc)
 gay_yes <- osmdata_sf(EEA_qd)
 gay_welcome <- osmdata_sf(EEA_qe)
 gay_only <- osmdata_sf(EEA_qf)
-# Let's see what I cought 
+# Checking how many datapoints were found
 unique_osmdata(lgbtq_primary)
 unique_osmdata(lgbtq_only)
-unique_osmdata(lgbtq_yes) # The instructions in the wiki said to disregard this, but there was one coded like this anyway
+unique_osmdata(lgbtq_yes)
 unique_osmdata(gay_yes)
 unique_osmdata(gay_welcome)
 unique_osmdata(gay_only) 
@@ -437,13 +77,16 @@ EEA_safe_spaces <- c(lgbtq_primary,
                      lgbtq_yes,
                      gay_yes, 
                      gay_welcome)
-# Having a closer look at the safe_spaces object
+# Having a closer look at the EEA_safe_spaces object
 class(EEA_safe_spaces)
 unique_osmdata(EEA_safe_spaces)
-# I am not sure what the linestings are supposed to be? Not the multipolygonst either. 
+# > The object contains not only points and polygons, but also lines and multipolygons, which is unexpected. 
+```
 
-# Querying Greenland 
-# Turning it into a bbox object
+*Greenland*  
+
+```{r}
+# Turning 'greenland_box' into a bbox object
 greenland_bb  <- st_bbox(greenland_box)
 class(greenland_bb)
 # Defining the bbox for the OPenStreetMap request
@@ -462,18 +105,99 @@ greenland_lgbtq_yes <- osmdata_sf(greenland_qc)
 greenland_gay_yes <- osmdata_sf(greenland_qd)
 greenland_gay_welcome <- osmdata_sf(greenland_qe)
 greenland_gay_only <- osmdata_sf(greenland_qf)
-# Let's see what I cought 
-unique_osmdata(greenland_lgbtq_primary) # No Dice
-unique_osmdata(greenland_lgbtq_only) # No Dice 
-unique_osmdata(greenland_lgbtq_yes) # No Dice
-unique_osmdata(greenland_gay_yes) # No Dice 
-unique_osmdata(greenland_gay_welcome) # No Dice 
-unique_osmdata(greenland_gay_only) # No Dice  
+# Checking how many datapoints were found
+unique_osmdata(greenland_lgbtq_primary)
+unique_osmdata(greenland_lgbtq_only)  
+unique_osmdata(greenland_lgbtq_yes) 
+unique_osmdata(greenland_gay_yes)  
+unique_osmdata(greenland_gay_welcome)
+unique_osmdata(greenland_gay_only) 
+# > No datapoints were found
+```
 
+*French Guiana*
+
+```{r}
+# Turning 'guiana_box' into a bbox object
+guiana_bb  <- st_bbox(guiana_box)
+class(guiana_bb)
+# Defining the bbox for the OPenStreetMap request
+guiana_q <- opq(bbox = guiana_bb, timeout = 180)
+# Defining requests 
+guiana_qa <- add_osm_feature(guiana_q, key = 'lgbtq',value = 'primary')
+guiana_qb <- add_osm_feature(guiana_q, key = 'lgbtq',value = 'only')
+guiana_qc <- add_osm_feature(guiana_q, key = 'lgbtq',value = 'yes')
+guiana_qd <- add_osm_feature(guiana_q, key = 'gay',value = 'yes')
+guiana_qe <- add_osm_feature(guiana_q, key = 'gay',value = 'welcome')
+guiana_qf <- add_osm_feature(guiana_q, key = 'gay',value = 'only')
+# Requesting data 
+guiana_lgbtq_primary <- osmdata_sf(guiana_qa)
+guiana_lgbtq_only <- osmdata_sf(guiana_qb)
+guiana_lgbtq_yes <- osmdata_sf(guiana_qc)
+guiana_gay_yes <- osmdata_sf(guiana_qd)
+guiana_gay_welcome <- osmdata_sf(guiana_qe)
+guiana_gay_only <- osmdata_sf(guiana_qf)
+# Checking how many datapoints were found
+unique_osmdata(guiana_lgbtq_primary)
+unique_osmdata(guiana_lgbtq_only) 
+unique_osmdata(guiana_lgbtq_yes) 
+unique_osmdata(guiana_gay_yes)
+unique_osmdata(guiana_gay_welcome) 
+unique_osmdata(guiana_gay_only)
+# > No datapoints were found
+```
+
+## Cleaning the data
+### Creating a map of countries in the EEA (+ Switzerland)
+While the main visualizations are made in leaflet, this is useful for quick illustrations and subsetting data. 
+The map is made with data from [ec.eurostat.eu](https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/administrative-units-statistical-units/countries) (© EuroGeographics for the administrative boundaries). 
+
+```{r}
+# loading data from eurostat 
+world_geo <- st_read("data/CNTR_RG_01M_2020_3035.shp/CNTR_RG_01M_2020_3035.shp")
+head(world_geo)
+
+# Let's try plotting the data 
+plot(st_geometry(euro_geo))
+
+# Re-projecting map to EPSG:4668 - a 2D map is easier for visualization purposes
+world_transform <- st_transform(world_geo, crs = 4668)
+
+# Let's try plotting the data - again
+plot(st_geometry(world_transform))
+
+# Creating a list of countries that are members of the EEA 
+EEA_members <- c("Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Norway", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland")
+# > With the excption of Switzerland, the list was taken from https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Glossary:European_Economic_Area_(EEA) (2021-05-25)
+
+# Checking to see if Anything was overlooked in this list 
+sort(unique(world_transform$NAME_ENGL))
+# > Though a part of the Danish Commonwealth, Greenland and the Faroes have their own entries in the dataset 
+
+# Adding the Faroes to the list 
+EEA_members <- c(EEA_members, "Faroes", "Greenland")
+EEA_members
+
+# Checking that all countries in the EEA_members list are present in the dataset 
+EEA_members %in% world_transform$NAME_ENGL
+
+# Creating a map only with the countries in the EEA for subsetting data later on
+EEA_geo <- world_transform %>% dplyr::filter(NAME_ENGL %in% EEA_members)
+
+# Showing EEA territories in a plot 
+plot(st_geometry(world_transform));plot(st_geometry(EEA_geo), col = "red", fil = "red", add = TRUE)
+
+# Setting the bounding box to one more focused on Europe for quick visualizations
+attr(st_geometry(world_transform), "bbox") <-  st_bbox(box)
+plot(st_geometry(world_transform))
+
+# Create a bounding box polygon to illustrate the bounding box
+graph_box <- st_make_grid(box, n = 1)
+plot(st_geometry(world_transform));plot(graph_box, add = TRUE)
 ```
 
 
-### Data cleaning 
+### Getting rid of duplicated datapoints and those outside the area of interest 
 
 ```{r}
 # Removing duplicated geometries
@@ -504,28 +228,78 @@ EEA_rpoint_selected <- EEA_rpoint %>% dplyr::select(all_of(EEA_keep_names))
 EEA_rpoly_selected <- EEA_rpoly %>% dplyr::select(all_of(EEA_keep_names))
 EEA_safe_osm <- rbind(EEA_rpoly_selected,EEA_rpoint_selected)
 
-# Remove points outside the nordics 
+# Remove points outside the area of interest
 EEA_safe_osm_filtered <- st_intersection(EEA_safe_osm, (EEA_geo %>% st_geometry() %>% st_union()))
 
-# Try plotting?
+# Plotting data 
 plot(st_geometry(world_transform));plot(st_geometry(EEA_safe_osm_filtered),col = "red", add = TRUE)
-# > This was a lot more data points. 
-
-
 ```
 
-## Saving data 
+### Having a look at the lines and multipolygons 
+Neither the lines nor the multipolygons show up on a plot, so for not I have elected to exclude them.
 
 ```{r}
-# st_write() had trouble dealing with some of the variables, so I removed all columns besides osm_id and name 
-EEA_point_select <- EEA_safe_osm_filtered %>% dplyr::select(osm_id, name)
-EEA_line_select <- EEA_rline %>% dplyr::select(osm_id, name)
-EEA_multipoly_select <- EEA_rmultipoly %>% dplyr::select(osm_id, name)
+plot(st_geometry(world_transform));plot(st_geometry(EEA_multipoly_select),col = "red", add = TRUE)
+plot(st_geometry(EEA_line_select))
+EEA_line_select
+world_transform
+```
+
+### Selecting important variables
+Not all of the variables in the dataset from OSM are useful for our visualization - here we remove the irrelevant ones. 
+
+```{r}
+# Removing unneeded variables
+names(EEA_safe_osm_filtered)
+EEA_point_select <- EEA_safe_osm_filtered %>% dplyr::select(osm_id, name, amenity, opening_hours, website)
+names(EEA_rline)
+EEA_line_select <- EEA_rline %>% dplyr::select(osm_id, name, amenity, opening_hours, website)
+names(EEA_rmultipoly)
+EEA_multipoly_select <- EEA_rmultipoly %>% dplyr::select(osm_id, name, amenity)
+```
+
+### Cleaning variables 
+As these variables will be used in the visualization, they should be made a little prettier to look at. 
+
+```{r}
+#=====> Cleaning EEA_point_select <=====#
+#===> Cleaning $name
+unique(EEA_point_select$name)
+# > I identified three issues: The translation of special characters, some entries with small first letters, and the use of quetation marks. 
+# Fixing the encoding of local characters to UTF-8
+EEA_point_select$name <- iconv(EEA_point_select$name, from = "UTF-8", to = "UTF-8")
+# Fixing the small first letters 
+EEA_point_select$name <- str_to_title(EEA_point_select$name)
+# Fixing the unneded quotation marks
+EEA_point_select$name <- str_replace_all(EEA_point_select$name, pattern = "\"", replacement = "")
+
+#===> Cleaning $amenity
+unique(EEA_point_select$amenity)
+# > two issues: the use of underscores instead of space and lack of capitalization
+# Fixing the use of underscores 
+EEA_point_select$amenity <- str_replace_all(EEA_point_select$amenity, pattern = "_", replacement = " ")
+# Fixing the capitalization 
+EEA_point_select$amenity <- str_to_sentence(EEA_point_select$amenity)
+
+#===> Cleaning $opening_hours
+unique(EEA_point_select$opening_hours)
+# > One immidiate issue identified: Encoding of characters
+# Fixing encoding 
+EEA_point_select$opening_hours <- iconv(EEA_point_select$opening_hours, from = "UTF-8", to = "UTF-8")
+
+#===> Cleaning $website
+unique(EEA_point_select$website)
+# > Probably best not to mess with this - there does not seem to be any obvious issues
+```
+## Saving data 
+As the lines and multypoligons were unexpected, they are saved separately for now.
+
+```{r}
 # Saving data in the data folder 
-st_write(EEA_point_select, "data/EEA_points_data.shp")
-st_write(EEA_line_select, "data/EEA_lines_data.shp")
-st_write(EEA_multipoly_select, "data/EEA_multypolygons_data.shp")
+st_write(EEA_point_select, "data/EEA_points.shp")
+st_write(EEA_line_select, "data/EEA_lines.shp")
+st_write(EEA_multipoly_select, "data/EEA_multypolygons.shp")
 # Checking if it worked 
-test_df <- read_sf("data/EEA_points_data.shp")
+test_df <- read_sf("data/EEA_points.shp")
 # >  It did :-) 
 ```
