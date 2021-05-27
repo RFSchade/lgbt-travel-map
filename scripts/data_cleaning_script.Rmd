@@ -12,7 +12,7 @@ knitr::opts_knit$set(root.dir = "..")
 
 ## Loading packages 
 ```{r}
-# Quick install/load of all used packages
+# Quick install/load of all used packages if needed 
 # install.packages("pacman")
 # pacman::p_load(pacman, osmdata, sf, tidyverse, raster)
 library(osmdata)
@@ -20,131 +20,48 @@ library(sf)
 library(tidyverse)
 library(raster)
 ```
+
 # Data gathering and cleaning 
 In this script, data on LGBT+ friendly amenities in the European Economic Area (EEA) and Switzerland is gathered from Open Street Maps and cleaned for use in the Leaflet visualization.
 
 ## Querying data from Open street maps
-### Creating bounding boxes
-Because of the scattering of European territories, the data will be queried within three bounding boxes - one containing most of Europe, one containing the Danish territory Greenland, and one containing the French territory French Guiana.
-
-```{r}
-# Bounding box for most of Europe
-box = c(xmin = -28.3, ymin = 31.1, xmax = 45.7, ymax = 71.7)
-# Bounding box for Greenland 
-greenland_box <- c(xmin = -76.6, ymin = 57.3, xmax = -9.0, ymax = 84.0)
-# Bounging box for French Guiana
-guiana_box <- c(xmin = -63.19, ymin = -0.33, xmax = -50.13, ymax = 9.59)
-```
-
-### Querying the data
 Data is queried withing the three bounding boxes that contain the keys gay= and lgbtq= with all associated values indicating that the location is lgbt+ friendly (gay=yes/welcome/only and lgbtq=primary/only/yes). Though the wiki for the lgbtq key discourages the use of lgbtq=yes, it still queried as some data was coded as such [(link here, last read 2021-05-25)](https://wiki.openstreetmap.org/wiki/Key:lgbtq).  
 
-*Europe (with the exception of Greenland and French Guiana)*  
+Because of the scattering of European territories, the data is queried from within three bounding boxes - one containing most of Europe, one containing the Danish territory Greenland, and one containing the French territory French Guiana.  
+
+The dataset requested from OSM is quite large, and to avoid passing the quota of data downloaded from one IP adress, each key and value is queried separately (with a buffer of 15 minuttes between each query). As such, this process is very time consuming. Therefore, the data is queried from a separate script (which can be sourced below). This should takes approximately 30 minuttes.  
+If this takes too long, or if there are any other issues, there is also the possibility of loading the raw data in the **Loading data** section below.   
+Alternatively, one could change the "timeout" between each query or manually do one request at a time.
+(The code is commented for the sake of the markdown)
 
 ```{r}
-# Turning 'box' into a bbox object
-EEA_bb  <- st_bbox(box)
-class(EEA_bb)
-# Defining the bbox for the OPenStreetMap request
-EEA_q <- opq(bbox = EEA_bb, timeout = 180)
-# Defining requests 
-EEA_qa <- add_osm_feature(EEA_q, key = 'lgbtq',value = 'primary')
-EEA_qb <- add_osm_feature(EEA_q, key = 'lgbtq',value = 'only')
-EEA_qc <- add_osm_feature(EEA_q, key = 'lgbtq',value = 'yes')
-EEA_qd <- add_osm_feature(EEA_q, key = 'gay',value = 'yes')
-EEA_qe <- add_osm_feature(EEA_q, key = 'gay',value = 'welcome')
-EEA_qf <- add_osm_feature(EEA_q, key = 'gay',value = 'only')
-# Requesting data 
-# (as querying the data all at once seemed to cause trouble with the limit of requests for one's IP adress, data associated with different keys and values is queried separately)
-# (This is time consuming, but at least it works if you wait a little inbetween requests)
-lgbtq_primary <- osmdata_sf(EEA_qa)
-lgbtq_only <- osmdata_sf(EEA_qb)
-lgbtq_yes <- osmdata_sf(EEA_qc)
-gay_yes <- osmdata_sf(EEA_qd)
-gay_welcome <- osmdata_sf(EEA_qe)
-gay_only <- osmdata_sf(EEA_qf)
-# Checking how many datapoints were found
-unique_osmdata(lgbtq_primary)
-unique_osmdata(lgbtq_only)
-unique_osmdata(lgbtq_yes)
-unique_osmdata(gay_yes)
-unique_osmdata(gay_welcome)
-unique_osmdata(gay_only) 
-
-# Gathering the data 
-EEA_safe_spaces <- c(lgbtq_primary,
-                     lgbtq_only, 
-                     lgbtq_yes,
-                     gay_yes, 
-                     gay_welcome)
-# Having a closer look at the EEA_safe_spaces object
-class(EEA_safe_spaces)
-unique_osmdata(EEA_safe_spaces)
-# > The object contains not only points and polygons, but also lines and multipolygons, which is unexpected. 
+# # Sourcing the script "OSMQuery.R"
+# source("scripts/OSMQuery.R")
+# 
+# #===> Saving data in a way that is compatible with the sf package
+# # Removing components of the osmdata that are duplicated within the object
+# EEA_safe_unique <- unique_osmdata(EEA_safe_spaces)
+# colnames(raw_points)
+# # Removing unneeded variables (as datasets that have too many fields/columns are hard to save)
+# raw_points <- EEA_safe_unique$osm_points %>%  dplyr::select(osm_id, name, amenity, opening_hours, website)
+# raw_polygons <- EEA_safe_unique$osm_polygons %>%  dplyr::select(osm_id, name, amenity, opening_hours, website)
+# raw_lines <- EEA_safe_unique$osm_lines %>% dplyr::select(osm_id, name, amenity, opening_hours, website)
+# raw_multipolygons <- EEA_safe_unique$osm_multipolygons %>% dplyr::select(osm_id, name, amenity)
+# # Saving data
+# st_write(raw_points, "data/raw/EEA_raw_points.shp")
+# st_write(raw_polygons, "data/raw/EEA_raw_polygons.shp")
+# st_write(raw_lines, "data/raw/EEA_raw_lines.shp")
+# st_write(raw_multipolygons, "data/raw/EEA_raw_multipolygons.shp")
 ```
 
-*Greenland*  
+## Loading data
 
 ```{r}
-# Turning 'greenland_box' into a bbox object
-greenland_bb  <- st_bbox(greenland_box)
-class(greenland_bb)
-# Defining the bbox for the OPenStreetMap request
-greenland_q <- opq(bbox = greenland_bb, timeout = 180)
-# Defining requests 
-greenland_qa <- add_osm_feature(greenland_q, key = 'lgbtq',value = 'primary')
-greenland_qb <- add_osm_feature(greenland_q, key = 'lgbtq',value = 'only')
-greenland_qc <- add_osm_feature(greenland_q, key = 'lgbtq',value = 'yes')
-greenland_qd <- add_osm_feature(greenland_q, key = 'gay',value = 'yes')
-greenland_qe <- add_osm_feature(greenland_q, key = 'gay',value = 'welcome')
-greenland_qf <- add_osm_feature(greenland_q, key = 'gay',value = 'only')
-# Requesting data 
-greenland_lgbtq_primary <- osmdata_sf(greenland_qa)
-greenland_lgbtq_only <- osmdata_sf(greenland_qb)
-greenland_lgbtq_yes <- osmdata_sf(greenland_qc)
-greenland_gay_yes <- osmdata_sf(greenland_qd)
-greenland_gay_welcome <- osmdata_sf(greenland_qe)
-greenland_gay_only <- osmdata_sf(greenland_qf)
-# Checking how many datapoints were found
-unique_osmdata(greenland_lgbtq_primary)
-unique_osmdata(greenland_lgbtq_only)  
-unique_osmdata(greenland_lgbtq_yes) 
-unique_osmdata(greenland_gay_yes)  
-unique_osmdata(greenland_gay_welcome)
-unique_osmdata(greenland_gay_only) 
-# > No datapoints were found
-```
-
-*French Guiana*
-
-```{r}
-# Turning 'guiana_box' into a bbox object
-guiana_bb  <- st_bbox(guiana_box)
-class(guiana_bb)
-# Defining the bbox for the OPenStreetMap request
-guiana_q <- opq(bbox = guiana_bb, timeout = 180)
-# Defining requests 
-guiana_qa <- add_osm_feature(guiana_q, key = 'lgbtq',value = 'primary')
-guiana_qb <- add_osm_feature(guiana_q, key = 'lgbtq',value = 'only')
-guiana_qc <- add_osm_feature(guiana_q, key = 'lgbtq',value = 'yes')
-guiana_qd <- add_osm_feature(guiana_q, key = 'gay',value = 'yes')
-guiana_qe <- add_osm_feature(guiana_q, key = 'gay',value = 'welcome')
-guiana_qf <- add_osm_feature(guiana_q, key = 'gay',value = 'only')
-# Requesting data 
-guiana_lgbtq_primary <- osmdata_sf(guiana_qa)
-guiana_lgbtq_only <- osmdata_sf(guiana_qb)
-guiana_lgbtq_yes <- osmdata_sf(guiana_qc)
-guiana_gay_yes <- osmdata_sf(guiana_qd)
-guiana_gay_welcome <- osmdata_sf(guiana_qe)
-guiana_gay_only <- osmdata_sf(guiana_qf)
-# Checking how many datapoints were found
-unique_osmdata(guiana_lgbtq_primary)
-unique_osmdata(guiana_lgbtq_only) 
-unique_osmdata(guiana_lgbtq_yes) 
-unique_osmdata(guiana_gay_yes)
-unique_osmdata(guiana_gay_welcome) 
-unique_osmdata(guiana_gay_only)
-# > No datapoints were found
+# Loading data for cleaning 
+raw_points <- st_read("data/raw/EEA_raw_points.shp")
+raw_polygons <- st_read("data/raw/EEA_raw_polygons.shp")
+raw_lines <- st_read("data/raw/EEA_raw_lines.shp")
+raw_multipolygons <- st_read("data/raw/EEA_raw_multipolygons.shp")
 ```
 
 ## Cleaning the data
@@ -158,7 +75,7 @@ world_geo <- st_read("data/CNTR_RG_01M_2020_3035.shp/CNTR_RG_01M_2020_3035.shp")
 head(world_geo)
 
 # Let's try plotting the data 
-plot(st_geometry(euro_geo))
+plot(st_geometry(world_geo))
 
 # Re-projecting map to EPSG:4668 - a 2D map is easier for visualization purposes
 world_transform <- st_transform(world_geo, crs = 4668)
@@ -188,6 +105,7 @@ EEA_geo <- world_transform %>% dplyr::filter(NAME_ENGL %in% EEA_members)
 plot(st_geometry(world_transform));plot(st_geometry(EEA_geo), col = "red", fil = "red", add = TRUE)
 
 # Setting the bounding box to one more focused on Europe for quick visualizations
+box = c(xmin = -28.3, ymin = 31.1, xmax = 45.7, ymax = 71.7)
 attr(st_geometry(world_transform), "bbox") <-  st_bbox(box)
 plot(st_geometry(world_transform))
 
@@ -197,36 +115,27 @@ plot(st_geometry(world_transform));plot(graph_box, add = TRUE)
 ```
 
 
-### Getting rid of duplicated datapoints and those outside the area of interest 
+### Transforming, merging, and subsetting data 
+(projection is changed for the sake of visualizations)
 
 ```{r}
-# Removing duplicated geometries
-EEA_safe_unique <- unique_osmdata(EEA_safe_spaces)
-
-# Isolate the points and change projection
-EEA_rpoint <- EEA_safe_unique$osm_points %>%
+# Isolate the points and change projection 
+EEA_rpoint <- raw_points %>%
   st_transform(crs = 4668) 
 
-# Isolate the polygons Compute centroids of the polygons and store data as points 
-EEA_rpoly  <- EEA_safe_unique$osm_polygons %>%
+# Change the projecttion, isolate the polygons Compute centroids of the polygons, and store data as points 
+EEA_rpoly  <- raw_polygons %>% 
   st_transform(crs = 4668) %>% 
   st_centroid()
 
-# > I am saving the lines and multipolygons in separate objects because I don't know what to do with them, but I don't want to have to query them again in case I could use them. 
-EEA_rline <- EEA_safe_unique$osm_lines %>% 
+# > the lines and multipolygons are saved in separate objects because thay are unexpected in the query, and will be examined separately 
+EEA_rline <- raw_lines %>% 
   st_transform(crs = 4668)
-EEA_rmultipoly <- EEA_safe_unique$osm_multipolygons %>% 
+EEA_rmultipoly <- raw_multipolygons %>% 
   st_transform(crs = 4668)
 
 # Merging
-# Keeping the columns that are present in all dataframes
-EEA_keep <- which(colnames(EEA_rpoint) %in% colnames(EEA_rpoly)[colnames(EEA_rpoly) %in% colnames(EEA_rpoint)])
-EEA_keep
-EEA_keep_names <- colnames(EEA_rpoint)[EEA_keep]
-EEA_keep_names
-EEA_rpoint_selected <- EEA_rpoint %>% dplyr::select(all_of(EEA_keep_names))
-EEA_rpoly_selected <- EEA_rpoly %>% dplyr::select(all_of(EEA_keep_names))
-EEA_safe_osm <- rbind(EEA_rpoly_selected,EEA_rpoint_selected)
+EEA_safe_osm <- rbind(EEA_rpoly,EEA_rpoint)
 
 # Remove points outside the area of interest
 EEA_safe_osm_filtered <- st_intersection(EEA_safe_osm, (EEA_geo %>% st_geometry() %>% st_union()))
@@ -236,27 +145,13 @@ plot(st_geometry(world_transform));plot(st_geometry(EEA_safe_osm_filtered),col =
 ```
 
 ### Having a look at the lines and multipolygons 
-Neither the lines nor the multipolygons show up on a plot, so for not I have elected to exclude them.
 
 ```{r}
-plot(st_geometry(world_transform));plot(st_geometry(EEA_multipoly_select),col = "red", add = TRUE)
-plot(st_geometry(EEA_line_select))
-EEA_line_select
-world_transform
+plot(st_geometry(world_transform));plot(st_geometry(EEA_rmultipoly),col = "red", add = TRUE)
+plot(st_geometry(EEA_rline))
 ```
 
-### Selecting important variables
-Not all of the variables in the dataset from OSM are useful for our visualization - here we remove the irrelevant ones. 
-
-```{r}
-# Removing unneeded variables
-names(EEA_safe_osm_filtered)
-EEA_point_select <- EEA_safe_osm_filtered %>% dplyr::select(osm_id, name, amenity, opening_hours, website)
-names(EEA_rline)
-EEA_line_select <- EEA_rline %>% dplyr::select(osm_id, name, amenity, opening_hours, website)
-names(EEA_rmultipoly)
-EEA_multipoly_select <- EEA_rmultipoly %>% dplyr::select(osm_id, name, amenity)
-```
+Neither the lines nor the multipolygons show up when plotted, and when one looks at the dataframes themselves, one can see that the lines lack values in most of the columns we found relevant, and that the multypolugons lack the columns for most of these categories to begin with. Given this (and that we are not sure what these geometries are supposed to represent to begin with), we have elected to exclude them from further analysis. 
 
 ### Cleaning variables 
 As these variables will be used in the visualization, they should be made a little prettier to look at. 
@@ -264,42 +159,41 @@ As these variables will be used in the visualization, they should be made a litt
 ```{r}
 #=====> Cleaning EEA_point_select <=====#
 #===> Cleaning $name
-unique(EEA_point_select$name)
+unique(EEA_safe_osm_filtered$name)
 # > I identified three issues: The translation of special characters, some entries with small first letters, and the use of quetation marks. 
 # Fixing the encoding of local characters to UTF-8
-EEA_point_select$name <- iconv(EEA_point_select$name, from = "UTF-8", to = "UTF-8")
+EEA_safe_osm_filtered$name <- iconv(EEA_safe_osm_filtered$name, from = "UTF-8", to = "UTF-8")
 # Fixing the small first letters 
-EEA_point_select$name <- str_to_title(EEA_point_select$name)
+EEA_safe_osm_filtered$name <- str_to_title(EEA_safe_osm_filtered$name)
 # Fixing the unneded quotation marks
-EEA_point_select$name <- str_replace_all(EEA_point_select$name, pattern = "\"", replacement = "")
+EEA_safe_osm_filtered$name <- str_replace_all(EEA_safe_osm_filtered$name, pattern = "\"", replacement = "")
 
 #===> Cleaning $amenity
-unique(EEA_point_select$amenity)
+unique(EEA_safe_osm_filtered$amenity)
 # > two issues: the use of underscores instead of space and lack of capitalization
 # Fixing the use of underscores 
-EEA_point_select$amenity <- str_replace_all(EEA_point_select$amenity, pattern = "_", replacement = " ")
+EEA_safe_osm_filtered$amenity <- str_replace_all(EEA_safe_osm_filtered$amenity, pattern = "_", replacement = " ")
 # Fixing the capitalization 
-EEA_point_select$amenity <- str_to_sentence(EEA_point_select$amenity)
+EEA_safe_osm_filtered$amenity <- str_to_sentence(EEA_safe_osm_filtered$amenity)
 
 #===> Cleaning $opening_hours
-unique(EEA_point_select$opening_hours)
+unique(EEA_safe_osm_filtered$opnng_h)
 # > One immidiate issue identified: Encoding of characters
 # Fixing encoding 
-EEA_point_select$opening_hours <- iconv(EEA_point_select$opening_hours, from = "UTF-8", to = "UTF-8")
+# (while the variavle from OSM is called opening_hours, saving and loading the data using read_sf changes it to opnng_h)
+EEA_safe_osm_filtered$opnng_h <- iconv(EEA_safe_osm_filtered$opnng_h, from = "UTF-8", to = "UTF-8")
 
 #===> Cleaning $website
-unique(EEA_point_select$website)
+unique(EEA_safe_osm_filtered$website)
 # > Probably best not to mess with this - there does not seem to be any obvious issues
 ```
+
 ## Saving data 
 As the lines and multypoligons were unexpected, they are saved separately for now.
 
 ```{r}
-# Saving data in the data folder 
-st_write(EEA_point_select, "data/EEA_points.shp")
-st_write(EEA_line_select, "data/EEA_lines.shp")
-st_write(EEA_multipoly_select, "data/EEA_multypolygons.shp")
-# Checking if it worked 
-test_df <- read_sf("data/EEA_points.shp")
-# >  It did :-) 
+# #===> Saving data in the data folder 
+# st_write(EEA_safe_osm_filtered, "data/EEA_points.shp")
+# st_write(EEA_safe_osm_filtered, "data/EEA_lines.shp")
+# st_write(EEA_safe_osm_filtered, "data/EEA_multypolygons.shp")
 ```
