@@ -1,7 +1,7 @@
 ---
 title: "Data Cleaning Script"
 author: "Rebecca Folmer Schade & Sophia Kleist Karlson"
-date: "2021-05-11 updated 2021-05-26"
+date: "2021-05-11 updated 2021-05-27"
 output: html_document
 ---
 
@@ -11,7 +11,7 @@ knitr::opts_knit$set(root.dir = "..")
 ```
 
 ## Loading packages 
-```{r}
+```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 # Quick install/load of all used packages if needed 
 # install.packages("pacman")
 # pacman::p_load(pacman, osmdata, sf, tidyverse, raster)
@@ -32,31 +32,30 @@ Because of the scattering of European territories, the data is queried from with
 The dataset requested from OSM is quite large, and to avoid passing the quota of data downloaded from one IP adress, each key and value is queried separately (with a buffer of 15 minuttes between each query). As such, this process is very time consuming. Therefore, the data is queried from a separate script (which can be sourced below). This should takes approximately 30 minuttes.  
 If this takes too long, or if there are any other issues, there is also the possibility of loading the raw data in the **Loading data** section below.   
 Alternatively, one could change the "timeout" between each query or manually do one request at a time.
-(The code is commented for the sake of the markdown)
 
-```{r}
-# # Sourcing the script "OSMQuery.R"
-# source("scripts/OSMQuery.R")
-# 
-# #===> Saving data in a way that is compatible with the sf package
-# # Removing components of the osmdata that are duplicated within the object
-# EEA_safe_unique <- unique_osmdata(EEA_safe_spaces)
-# colnames(raw_points)
-# # Removing unneeded variables (as datasets that have too many fields/columns are hard to save)
-# raw_points <- EEA_safe_unique$osm_points %>%  dplyr::select(osm_id, name, amenity, opening_hours, website)
-# raw_polygons <- EEA_safe_unique$osm_polygons %>%  dplyr::select(osm_id, name, amenity, opening_hours, website)
-# raw_lines <- EEA_safe_unique$osm_lines %>% dplyr::select(osm_id, name, amenity, opening_hours, website)
-# raw_multipolygons <- EEA_safe_unique$osm_multipolygons %>% dplyr::select(osm_id, name, amenity)
-# # Saving data
-# st_write(raw_points, "data/raw/EEA_raw_points.shp")
-# st_write(raw_polygons, "data/raw/EEA_raw_polygons.shp")
-# st_write(raw_lines, "data/raw/EEA_raw_lines.shp")
-# st_write(raw_multipolygons, "data/raw/EEA_raw_multipolygons.shp")
+```{r, eval=FALSE}
+# Sourcing the script "OSMQuery.R"
+source("scripts/OSMQuery.R")
+
+#===> Saving data in a way that is compatible with the sf package
+# Removing components of the osmdata that are duplicated within the object
+EEA_safe_unique <- unique_osmdata(EEA_safe_spaces)
+colnames(raw_points)
+# Removing unneeded variables (as datasets that have too many fields/columns are hard to save)
+raw_points <- EEA_safe_unique$osm_points %>%  dplyr::select(osm_id, name, amenity, opening_hours, website)
+raw_polygons <- EEA_safe_unique$osm_polygons %>%  dplyr::select(osm_id, name, amenity, opening_hours, website)
+raw_lines <- EEA_safe_unique$osm_lines %>% dplyr::select(osm_id, name, amenity, opening_hours, website)
+raw_multipolygons <- EEA_safe_unique$osm_multipolygons %>% dplyr::select(osm_id, name, amenity)
+# Saving data
+st_write(raw_points, "data/raw/EEA_raw_points.shp")
+st_write(raw_polygons, "data/raw/EEA_raw_polygons.shp")
+st_write(raw_lines, "data/raw/EEA_raw_lines.shp")
+st_write(raw_multipolygons, "data/raw/EEA_raw_multipolygons.shp")
 ```
 
 ## Loading data
 
-```{r}
+```{r, results='hide', warning=FALSE, message=FALSE, error=FALSE}
 # Loading data for cleaning 
 raw_points <- st_read("data/raw/EEA_raw_points.shp")
 raw_polygons <- st_read("data/raw/EEA_raw_polygons.shp")
@@ -69,7 +68,7 @@ raw_multipolygons <- st_read("data/raw/EEA_raw_multipolygons.shp")
 While the main visualizations are made in leaflet, this is useful for quick illustrations and subsetting data. 
 The map is made with data from [ec.eurostat.eu](https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/administrative-units-statistical-units/countries) (© EuroGeographics for the administrative boundaries). 
 
-```{r}
+```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 # loading data from eurostat 
 world_geo <- st_read("data/CNTR_RG_01M_2020_3035.shp/CNTR_RG_01M_2020_3035.shp")
 head(world_geo)
@@ -118,7 +117,7 @@ plot(st_geometry(world_transform));plot(graph_box, add = TRUE)
 ### Transforming, merging, and subsetting data 
 (projection is changed for the sake of visualizations)
 
-```{r}
+```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 # Isolate the points and change projection 
 EEA_rpoint <- raw_points %>%
   st_transform(crs = 4668) 
@@ -147,8 +146,10 @@ plot(st_geometry(world_transform));plot(st_geometry(EEA_safe_osm_filtered),col =
 ### Having a look at the lines and multipolygons 
 
 ```{r}
+# Visualizing multipolygons
 plot(st_geometry(world_transform));plot(st_geometry(EEA_rmultipoly),col = "red", add = TRUE)
-plot(st_geometry(EEA_rline))
+# Visualizing lines
+plot(st_geometry(world_transform));plot(st_geometry(EEA_rline), col = "red", add = TRUE)
 ```
 
 Neither the lines nor the multipolygons show up when plotted, and when one looks at the dataframes themselves, one can see that the lines lack values in most of the columns we found relevant, and that the multypolugons lack the columns for most of these categories to begin with. Given this (and that we are not sure what these geometries are supposed to represent to begin with), we have elected to exclude them from further analysis. 
@@ -156,7 +157,7 @@ Neither the lines nor the multipolygons show up when plotted, and when one looks
 ### Cleaning variables 
 As these variables will be used in the visualization, they should be made a little prettier to look at. 
 
-```{r}
+```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 #=====> Cleaning EEA_point_select <=====#
 #===> Cleaning $name
 unique(EEA_safe_osm_filtered$name)
@@ -185,15 +186,15 @@ EEA_safe_osm_filtered$opnng_h <- iconv(EEA_safe_osm_filtered$opnng_h, from = "UT
 
 #===> Cleaning $website
 unique(EEA_safe_osm_filtered$website)
-# > Probably best not to mess with this - there does not seem to be any obvious issues
+# > Probably best not to mess with this - there do not seem to be any obvious issues
 ```
 
 ## Saving data 
 As the lines and multypoligons were unexpected, they are saved separately for now.
 
-```{r}
-# #===> Saving data in the data folder 
-# st_write(EEA_safe_osm_filtered, "data/EEA_points.shp")
-# st_write(EEA_safe_osm_filtered, "data/EEA_lines.shp")
-# st_write(EEA_safe_osm_filtered, "data/EEA_multypolygons.shp")
+```{r, eval=FALSE}
+#===> Saving data in the data folder
+st_write(EEA_safe_osm_filtered, "data/EEA_points.shp")
+st_write(EEA_safe_osm_filtered, "data/EEA_lines.shp")
+st_write(EEA_safe_osm_filtered, "data/EEA_multypolygons.shp")
 ```
