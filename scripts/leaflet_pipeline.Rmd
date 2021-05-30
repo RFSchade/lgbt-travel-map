@@ -445,11 +445,22 @@ map it
 #https://www.rdocumentation.org/packages/leaflet/versions/2.0.4.1/topics/leafletOutput
 #UI is the user interface. the "map" is the outputId, which is the "output variable to read from"
 
+r = sqrt(2)/10
+safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r)
+
 pacman::p_load(pacman, shiny, leaflet, leatlet.extras, tidyverse)
 
 ui <- fluidPage(
   titlePanel("LGBTQ+ Travel Map"), 
-  leafletOutput("map"))
+  leafletOutput("map"),
+  column(
+    3,
+    h5("This doesn't work: It always shows the same ZIP:"),
+    tableOutput("centerZip"),
+    br(),
+    h5("This works: the ZIPs change as you move the map around:"),
+    tableOutput("inBoundsZIPs")
+  ))
 
 
 server <- function(input, output, session) {
@@ -465,10 +476,10 @@ server <- function(input, output, session) {
       addCircleMarkers(data = safespace_EEA_crs,
                        opacity = 0.5, color = "black", stroke = TRUE,
                        fillOpacity = 0.5, weight=2, fillColor = "purple",
-                       popup = paste0("Name: ", test_data$name,
-                                      "<br> Type: ", test_data$amenity,
-                                      "<br> Website: ", test_data$website,
-                                      "<br> Opening hours: ", test_data$opnng_h), #,
+                       popup = paste0("Name: ", EEA_data$name,
+                                      "<br> Type: ", EEA_data$amenity,
+                                      "<br> Website: ", EEA_data$website,
+                                      "<br> Opening hours: ", EEA_data$opnng_h), #,
                        group = "Safe spaces",
                        
                        clusterOptions = markerClusterOptions()) %>%
@@ -483,7 +494,7 @@ server <- function(input, output, session) {
       
       addLayersControl(
         baseGroups = c("Topographic","Aerial"),
-        overlayGroups = c("Safe spaces", "Gayborhoods", "My location"),
+        overlayGroups = c("Safe spaces", "Gayborhoods"),
         options = layersControlOptions(collapsed = T)) %>% 
       
       addControlGPS(
@@ -492,6 +503,7 @@ server <- function(input, output, session) {
                              autoCenter = TRUE, maxZoom = 10, 
                              setView = TRUE))
   })
+  
   
   #observe(
    # print(paste0("map center - lat: ", input$map_gps_located$coordinates$lat, ", lon: ", input$map_gps_located$coordinates$lng))
@@ -502,6 +514,12 @@ server <- function(input, output, session) {
     event <- input$map_gps_located
     if (is.null(event))
       return()
+    #print(event$coordinates)
+    
+    #GPS_buffer <- st_buffer(st_geometry(st_point(c(event$coordinates$lng, event$coordinates$lat))), r)
+    #st_crs(GPS_buffer) <- crs_needed
+    #nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers, pairwise = FALSE)
+    #print(nearest_marker)
     
     leafletProxy("map") %>% clearPopups() %>% 
       #addMarkers(
@@ -509,12 +527,37 @@ server <- function(input, output, session) {
         #lat = event$coordinates$lat) %>% 
       addPopups(
         lng = event$coordinates$lng,
-        lat = event$coordinates$lat, "Here are you")
+        lat = event$coordinates$lat, "Here are you! Your nearest safe space is ")
   })
   
 }
 
 shinyApp(ui,server)
 
+
+GPS_buffer <- st_buffer(st_geometry(st_point(c(10.20209, 56.15943))), r)
+#print(GPS_buffer)
+    
+st_crs(GPS_buffer) <- crs_needed
+
+#GPS_buffer <- st_transform(GPS_buffer, crs = crs_needed)
+    
+nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers)
+    
+print(nearest_marker)
+plot(nearest_marker)
+class(nearest_marker)
+
+plot(min(st_length(nearest_marker)))
 ```
 
+  centeredZ <- eventReactive(input$map_bounds,{
+    if (is.null(input$map_bounds))
+      return(NULL)
+    bounds <- input$map_bounds
+    center <- c(mean(bounds$north, bounds$south),mean(bounds$east, bounds$west))
+    #center <- c( 42.65214,-71.43929)
+    nearest.zip <- zip_coord[which.min(colSums(t(zip_coord[-1]) - center)^2),1]    
+    # Pick out the point
+    subset(zip_coord, ZIP == nearest.zip)
+  })
