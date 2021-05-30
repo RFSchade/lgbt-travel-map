@@ -647,7 +647,7 @@ for making the nearest safe space pop up https://github.com/rstudio/shiny-exampl
 
 this works:
 
-observe({
+  observe({
     
     event <- input$map_gps_located
     if (is.null(event))

@@ -16,13 +16,13 @@ server <- function(input, output, session) {
       addProviderTiles("Esri.WorldTopoMap", group = "Topographic") %>%
       addProviderTiles("Esri.WorldImagery", group = "Aerial") %>%
       
-      addCircleMarkers(data = safespace_crs,
+      addCircleMarkers(data = safespace_EEA_crs,
                        opacity = 0.5, color = "black", stroke = TRUE,
                        fillOpacity = 0.5, weight=2, fillColor = "purple",
-                       popup = paste0("Name: ", test_data$name,
-                                      "<br> Type: ", test_data$amenity,
-                                      "<br> Website: ", test_data$website,
-                                      "<br> Opening hours: ", test_data$opnng_h), #,
+                       popup = paste0("Name: ", EEA_data$name,
+                                      "<br> Type: ", EEA_data$amenity,
+                                      "<br> Website: ", EEA_data$website,
+                                      "<br> Opening hours: ", EEA_data$opnng_h), #,
                        group = "Safe spaces",
                        
                        clusterOptions = markerClusterOptions()) %>%
@@ -62,9 +62,9 @@ server <- function(input, output, session) {
                              setView = TRUE))
   })
   
-  observe(
-    print(paste0("map center - lat: ", input$map_gps_located$coordinates$lat, ", lon: ", input$map_gps_located$coordinates$lng))
-  )
+  #observe(
+   # print(paste0("map center - lat: ", input$map_gps_located$coordinates$lat, ", lon: ", input$map_gps_located$coordinates$lng))
+  #)
   
   observe({
     
@@ -73,9 +73,9 @@ server <- function(input, output, session) {
       return()
     
     leafletProxy("map") %>% clearPopups() %>% 
-      #addMarkers(
-       # lng = event$coordinates$lng,
-        #lat = event$coordinates$lat) %>% 
+      addMarkers(
+        lng = event$coordinates$lng,
+        lat = event$coordinates$lat) %>% 
       addPopups(
         lng = event$coordinates$lng,
         lat = event$coordinates$lat, "Here are you")
