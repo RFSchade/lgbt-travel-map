@@ -529,22 +529,38 @@ server <- function(input, output, session) {
     nearest <- lines_lengths_sorted$nearest_marker[1,]
     nearest_name <- lines_lengths_sorted$name[1]
     nearest_length <- lines_lengths_sorted$length[1]
+    nearest_safe <- lines_lengths_sorted$geometry[1]
+    nearest_type <- lines_lengths_sorted$amenity[1]
+    nearest_website <- lines_lengths_sorted$website[1]
+    nearest_open <- lines_lengths_sorted$opnng_h[1]
     
     print(nearest_name)
     print(nearest)
     
     leafletProxy("map") %>% clearPopups() %>% 
-      #addMarkers(
-       # lng = event$coordinates$lng,
-        #lat = event$coordinates$lat) %>% 
+      addMarkers(
+        lng = event$coordinates$lng,
+        lat = event$coordinates$lat,
+        popup = paste0("You are here! Follow the blue line to see your nearest safe space.
+               <br> The safe space is called ", nearest_name,
+               "<br> It is ", round(nearest_length/1000, 1), " km away."),
+        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% 
+    
       addPopups(
         lng = event$coordinates$lng,
         lat = event$coordinates$lat, 
-        paste0("You are here! Follow the blue line to go to your nearest safe space.
+        popup = paste0("You are here! Follow the blue line to see your nearest safe space.
                <br> The safe space is called ", nearest_name,
-               "<br> It is ", round(nearest_length/1000, 1), " km away."),
-        popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% 
+               "<br> It is ", round(nearest_length/1000, 1), " km away.")) %>% #,
+        #popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% 
       
+      addPopups(
+        data = nearest_safe, 
+        popup = paste0("Name: ", nearest_name,
+                                      "<br> Type: ", nearest_type,
+                                      "<br> Website: ", nearest_website,
+                                      "<br> Opening hours: ", nearest_open)
+      ) %>% 
       addPolygons(data = nearest)
   })
   

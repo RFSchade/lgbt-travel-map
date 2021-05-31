@@ -1,10 +1,43 @@
 
+#### LOAD PACKAGES AND DATA ####
 pacman::p_load(pacman, shiny, leaflet, leatlet.extras, tidyverse)
+
+# load in data
+EEA_data <- st_read("data/EEA_points.shp")
+
+# plot the points (don't know why it only shows 6)
+#plot(st_geometry(EEA_data))
+
+# look at the coordinates
+#EEA_data["geometry"]
+
+# check the crs
+#st_crs(EEA_data)
+
+# when looking at the first map (by running the next code chunk without the last bit of this chunk) the points were not at the right place - maybe 100 meters to the north east. I also got this error message:
+#sf layer has inconsistent datum (+proj=longlat +ellps=intl +towgs84=-86,-98,-119,0,0,0,0 +no_defs).
+#Need '+proj=longlat +datum=WGS84' 
+
+# Therefore, I re-projected the test data to the crs recommended in the error message above, and it worked!
+crs_needed <- "+proj=longlat +datum=WGS84"
+safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
+
+
+
+#### PREPARE THE BUFFERS FOR THE SAFE SPACES, TO BE USED TO FIND THE NEAREST SAFE SPACE LATER ####
+r = 0.00001
+safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r)
+
+
+#### UI ####
 
 ui <- fluidPage(
   titlePanel("LGBTQ+ Travel Map"), 
-  leafletOutput("map"))
+  leafletOutput("map"),
+)
 
+
+#### SERVER ####
 
 server <- function(input, output, session) {
   
@@ -27,21 +60,6 @@ server <- function(input, output, session) {
                        
                        clusterOptions = markerClusterOptions()) %>%
       
-      
-      #addEasyButton(
-       # easyButton(
-        #  position = "topleft",
-         # icon = "fa-crosshairs",
-          #title = "Locate Me",
-          #onClick = JS("
-           # function(btn, map) {
-            #  Shiny.onInputChange('my_easy_button', 'clicked');
-            #}"
-                       
-          #)
-        #)
-      #) %>% 
-      
       addMeasure(
         position = "topleft",
         primaryLengthUnit = "meters",
@@ -52,7 +70,7 @@ server <- function(input, output, session) {
       
       addLayersControl(
         baseGroups = c("Topographic","Aerial"),
-        overlayGroups = c("Safe spaces", "Gayborhoods", "My location"),
+        overlayGroups = c("Safe spaces", "Gayborhoods"),
         options = layersControlOptions(collapsed = T)) %>% 
       
       addControlGPS(
@@ -62,9 +80,6 @@ server <- function(input, output, session) {
                              setView = TRUE))
   })
   
-  #observe(
-   # print(paste0("map center - lat: ", input$map_gps_located$coordinates$lat, ", lon: ", input$map_gps_located$coordinates$lng))
-  #)
   
   observe({
     
@@ -72,13 +87,50 @@ server <- function(input, output, session) {
     if (is.null(event))
       return()
     
+    GPS_buffer <- st_buffer(st_geometry(st_point(c(event$coordinates$lng, event$coordinates$lat))), r)
+    st_crs(GPS_buffer) <- crs_needed
+    
+    safespace_EEA_crs$nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers, pairwise = FALSE)
+    
+    safespace_EEA_crs$length <- st_length(safespace_EEA_crs$nearest_marker)
+
+    lines_lengths_sorted <- safespace_EEA_crs[order(safespace_EEA_crs$length),]
+    
+    nearest <- lines_lengths_sorted$nearest_marker[1,]
+    nearest_name <- lines_lengths_sorted$name[1]
+    nearest_length <- lines_lengths_sorted$length[1]
+    nearest_safe <- lines_lengths_sorted$geometry[1]
+    nearest_type <- lines_lengths_sorted$amenity[1]
+    nearest_website <- lines_lengths_sorted$website[1]
+    nearest_open <- lines_lengths_sorted$opnng_h[1]
+    
+    print(nearest_name)
+    print(nearest)
+    
     leafletProxy("map") %>% clearPopups() %>% 
       addMarkers(
         lng = event$coordinates$lng,
-        lat = event$coordinates$lat) %>% 
+        lat = event$coordinates$lat,
+        popup = paste0("You are here! Follow the blue line to see your nearest safe space.
+               <br> The safe space is called ", nearest_name,
+                       "<br> It is ", round(nearest_length/1000, 1), " km away."),
+        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% 
+      
       addPopups(
         lng = event$coordinates$lng,
-        lat = event$coordinates$lat, "Here are you")
+        lat = event$coordinates$lat, 
+        popup = paste0("You are here! Follow the blue line to see your nearest safe space.
+               <br> The safe space is called ", nearest_name,
+                       "<br> It is ", round(nearest_length/1000, 1), " km away.")) %>%
+
+      addPopups(
+        data = nearest_safe, 
+        popup = paste0("Name: ", nearest_name,
+                       "<br> Type: ", nearest_type,
+                       "<br> Website: ", nearest_website,
+                       "<br> Opening hours: ", nearest_open)
+      ) %>% 
+      addPolygons(data = nearest)
   })
   
 }
