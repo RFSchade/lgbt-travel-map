@@ -46,21 +46,32 @@ raw_points <- EEA_safe_unique$osm_points %>%  dplyr::select(osm_id, name, amenit
 raw_polygons <- EEA_safe_unique$osm_polygons %>%  dplyr::select(osm_id, name, amenity, opening_hours, website)
 raw_lines <- EEA_safe_unique$osm_lines %>% dplyr::select(osm_id, name, amenity, opening_hours, website)
 raw_multipolygons <- EEA_safe_unique$osm_multipolygons %>% dplyr::select(osm_id, name, amenity)
+# Sorting out issues with encoding of characters 
+raw_points$name <- iconv(raw_points$name, from = "UTF-8", to = "UTF-8")
+raw_points$opening_hours <- iconv(raw_points$opening_hours, from = "UTF-8", to = "UTF-8")
+#
+raw_polygons$name <- iconv(raw_polygons$name, from = "UTF-8", to = "UTF-8")
+raw_polygons$opening_hours <- iconv(raw_polygons$opening_hours, from = "UTF-8", to = "UTF-8")
+#
+raw_lines$name <- iconv(raw_lines$name, from = "UTF-8", to = "UTF-8")
+raw_lines$opening_hours <- iconv(raw_lines$opening_hours, from = "UTF-8", to = "UTF-8")
+# 
+raw_multipolygons$name <- iconv(raw_multipolygons$name, from = "UTF-8", to = "UTF-8")
 # Saving data
-st_write(raw_points, "data/raw/EEA_raw_points.shp")
-st_write(raw_polygons, "data/raw/EEA_raw_polygons.shp")
-st_write(raw_lines, "data/raw/EEA_raw_lines.shp")
-st_write(raw_multipolygons, "data/raw/EEA_raw_multipolygons.shp")
+st_write(raw_points, "data/raw/EEA_raw_points5.shp", layer_options = "ENCODING=UTF-8", delete_layer = TRUE)
+st_write(raw_polygons, "data/raw/EEA_raw_polygons5.shp", layer_options = "ENCODING=UTF-8", delete_layer = TRUE)
+st_write(raw_lines, "data/raw/EEA_raw_lines5.shp", layer_options = "ENCODING=UTF-8", delete_layer = TRUE)
+st_write(raw_multipolygons, "data/raw/EEA_raw_multipolygons5.shp", layer_options = "ENCODING=UTF-8", delete_layer = TRUE)
 ```
 
 ## Loading data
 
 ```{r, results='hide', warning=FALSE, message=FALSE, error=FALSE}
 # Loading data for cleaning 
-raw_points <- st_read("data/raw/EEA_raw_points.shp")
-raw_polygons <- st_read("data/raw/EEA_raw_polygons.shp")
-raw_lines <- st_read("data/raw/EEA_raw_lines.shp")
-raw_multipolygons <- st_read("data/raw/EEA_raw_multipolygons.shp")
+raw_points <- st_read("data/raw/EEA_raw_points5.shp", options = "ENCODING=UTF-8")
+raw_polygons <- st_read("data/raw/EEA_raw_polygons5.shp", options = "ENCODING=UTF-8")
+raw_lines <- st_read("data/raw/EEA_raw_lines.shp", options = "ENCODING=UTF-8")
+raw_multipolygons <- st_read("data/raw/EEA_raw_multipolygons.shp", options = "ENCODING=UTF-8")
 ```
 
 ## Cleaning the data
@@ -76,18 +87,12 @@ head(world_geo)
 # Let's try plotting the data 
 plot(st_geometry(world_geo))
 
-# Re-projecting map to EPSG:4668 - a 2D map is easier for visualization purposes
-world_transform <- st_transform(world_geo, crs = 4668)
-
-# Let's try plotting the data - again
-plot(st_geometry(world_transform))
-
 # Creating a list of countries that are members of the EEA 
 EEA_members <- c("Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Norway", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland")
 # > With the excption of Switzerland, the list was taken from https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Glossary:European_Economic_Area_(EEA) (2021-05-25)
 
 # Checking to see if Anything was overlooked in this list 
-sort(unique(world_transform$NAME_ENGL))
+sort(unique(world_geo$NAME_ENGL))
 # > Though a part of the Danish Commonwealth, Greenland and the Faroes have their own entries in the dataset 
 
 # Adding the Faroes to the list 
@@ -95,22 +100,13 @@ EEA_members <- c(EEA_members, "Faroes", "Greenland")
 EEA_members
 
 # Checking that all countries in the EEA_members list are present in the dataset 
-EEA_members %in% world_transform$NAME_ENGL
+EEA_members %in% world_geo$NAME_ENGL
 
 # Creating a map only with the countries in the EEA for subsetting data later on
-EEA_geo <- world_transform %>% dplyr::filter(NAME_ENGL %in% EEA_members)
+EEA_geo <- world_geo %>% dplyr::filter(NAME_ENGL %in% EEA_members)
 
 # Showing EEA territories in a plot 
-plot(st_geometry(world_transform));plot(st_geometry(EEA_geo), col = "red", fil = "red", add = TRUE)
-
-# Setting the bounding box to one more focused on Europe for quick visualizations
-box = c(xmin = -28.3, ymin = 31.1, xmax = 45.7, ymax = 71.7)
-attr(st_geometry(world_transform), "bbox") <-  st_bbox(box)
-plot(st_geometry(world_transform))
-
-# Create a bounding box polygon to illustrate the bounding box
-graph_box <- st_make_grid(box, n = 1)
-plot(st_geometry(world_transform));plot(graph_box, add = TRUE)
+plot(st_geometry(world_geo));plot(st_geometry(EEA_geo), col = "red", fil = "red", add = TRUE)
 ```
 
 
@@ -120,39 +116,36 @@ plot(st_geometry(world_transform));plot(graph_box, add = TRUE)
 ```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 # Isolate the points and change projection 
 EEA_rpoint <- raw_points %>%
-  st_transform(crs = 4668) 
+  st_transform(crs = 3035) 
 
 # Change the projecttion, isolate the polygons Compute centroids of the polygons, and store data as points 
 EEA_rpoly  <- raw_polygons %>% 
-  st_transform(crs = 4668) %>% 
+  st_transform(crs = 3035) %>% 
   st_centroid()
 
 # > the lines and multipolygons are saved in separate objects because thay are unexpected in the query, and will be examined separately 
 EEA_rline <- raw_lines %>% 
-  st_transform(crs = 4668)
+  st_transform(crs = 3035)
 EEA_rmultipoly <- raw_multipolygons %>% 
-  st_transform(crs = 4668)
+  st_transform(crs = 3035)
 
 # Merging
 EEA_safe_osm <- rbind(EEA_rpoly,EEA_rpoint)
 
 # Remove points outside the area of interest
 EEA_safe_osm_filtered <- st_intersection(EEA_safe_osm, (EEA_geo %>% st_geometry() %>% st_union()))
-
-# Plotting data 
-plot(st_geometry(world_transform));plot(st_geometry(EEA_safe_osm_filtered),col = "red", add = TRUE)
 ```
 
 ### Having a look at the lines and multipolygons 
 
 ```{r}
-# Visualizing multipolygons
-plot(st_geometry(world_transform));plot(st_geometry(EEA_rmultipoly),col = "red", add = TRUE)
+# looking at multipolygons
+head(EEA_rmultipoly)
 # Visualizing lines
-plot(st_geometry(world_transform));plot(st_geometry(EEA_rline), col = "red", add = TRUE)
+head(EEA_rline)
 ```
 
-Neither the lines nor the multipolygons show up when plotted, and when one looks at the dataframes themselves, one can see that the lines lack values in most of the columns we found relevant, and that the multypolugons lack the columns for most of these categories to begin with. Given this (and that we are not sure what these geometries are supposed to represent to begin with), we have elected to exclude them from further analysis. 
+When one looks at the dataframes themselves, one can see that the lines lack values in most of the columns we found relevant, and that the multypolugons lack the columns for most of these categories to begin with. Given this (and that we are not sure what these geometries are supposed to represent to begin with), we have elected to exclude them from further analysis. 
 
 ### Cleaning variables 
 As these variables will be used in the visualization, they should be made a little prettier to look at. 
@@ -161,13 +154,11 @@ As these variables will be used in the visualization, they should be made a litt
 #=====> Cleaning EEA_point_select <=====#
 #===> Cleaning $name
 unique(EEA_safe_osm_filtered$name)
-# > I identified three issues: The translation of special characters, some entries with small first letters, and the use of quetation marks. 
-# Fixing the encoding of local characters to UTF-8
-EEA_safe_osm_filtered$name <- iconv(EEA_safe_osm_filtered$name, from = "UTF-8", to = "UTF-8")
-# Fixing the small first letters 
-EEA_safe_osm_filtered$name <- str_to_title(EEA_safe_osm_filtered$name)
+# > I identified two issues: Some entries with small first letters, and the use of quetation marks.
 # Fixing the unneded quotation marks
 EEA_safe_osm_filtered$name <- str_replace_all(EEA_safe_osm_filtered$name, pattern = "\"", replacement = "")
+# Fixing the small first letters 
+EEA_safe_osm_filtered$name <- str_to_title(EEA_safe_osm_filtered$name)
 
 #===> Cleaning $amenity
 unique(EEA_safe_osm_filtered$amenity)
@@ -176,17 +167,6 @@ unique(EEA_safe_osm_filtered$amenity)
 EEA_safe_osm_filtered$amenity <- str_replace_all(EEA_safe_osm_filtered$amenity, pattern = "_", replacement = " ")
 # Fixing the capitalization 
 EEA_safe_osm_filtered$amenity <- str_to_sentence(EEA_safe_osm_filtered$amenity)
-
-#===> Cleaning $opening_hours
-unique(EEA_safe_osm_filtered$opnng_h)
-# > One immidiate issue identified: Encoding of characters
-# Fixing encoding 
-# (while the variavle from OSM is called opening_hours, saving and loading the data using read_sf changes it to opnng_h)
-EEA_safe_osm_filtered$opnng_h <- iconv(EEA_safe_osm_filtered$opnng_h, from = "UTF-8", to = "UTF-8")
-
-#===> Cleaning $website
-unique(EEA_safe_osm_filtered$website)
-# > Probably best not to mess with this - there do not seem to be any obvious issues
 ```
 
 ## Saving data 
