@@ -2,12 +2,14 @@
 #library(shiny)
 #runApp("shinyapp")
 
+#uncomment the below to run in RStudio and not in the way above
+#setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
 
 #### LOAD PACKAGES AND DATA ####
 pacman::p_load(pacman, shiny, leaflet, leatlet.extras, tidyverse)
 
 # load in data
-EEA_data <- st_read("../data/EEA_points.shp")
+EEA_data <- st_read("../data/EEA_points.shp")#
 
 # plot the points (don't know why it only shows 6)
 #plot(st_geometry(EEA_data))
