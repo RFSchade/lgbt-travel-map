@@ -34,7 +34,16 @@ safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r)
 ui <- fluidPage(
   titlePanel("LGBTQ+ Travel Map"), 
   leafletOutput("map"),
-)
+  column(
+    10,
+    h5("Wellcome to our LGBTQ+ Travel Map! On this map, you can see safe spaces all over Europe.
+       The safe spaces are clustered within the colored bubbles, so click on a bubble to zoom in on the area you want to check out!
+       The safe spaces are marked with purple circles. Click on a circle to see information about the safe space. 
+       If you click the crosshair button on the left, you will see your own location and your nearest safe space.
+       If you click the measurement button on the left, you can plan a route and see it's length.
+       Finally, in the top right corner, you can choose if you want to see a topographic or aerial map. Here, you can also choose to see only safe spaces, or only gayborhoods.
+       Creators: Rebecca Folmer Schade and Sophia Kleist Karlson.")
+  ))
 
 
 #### SERVER ####
@@ -45,7 +54,7 @@ server <- function(input, output, session) {
     
     leaflet() %>%
       addTiles() %>%
-      addControl("Queer Travel Map", position = "topleft", className="map-title") %>% #
+      #addControl("Queer Travel Map", position = "topleft", className="map-title") %>% #
       addProviderTiles("Esri.WorldTopoMap", group = "Topographic") %>%
       addProviderTiles("Esri.WorldImagery", group = "Aerial") %>%
       
@@ -60,13 +69,6 @@ server <- function(input, output, session) {
                        
                        clusterOptions = markerClusterOptions()) %>%
       
-      addMeasure(
-        position = "topleft",
-        primaryLengthUnit = "meters",
-        primaryAreaUnit = "sqmeters",
-        activeColor = "#3D535D",
-        completedColor = "#7D4479",
-        localization = "en") %>% 
       
       addLayersControl(
         baseGroups = c("Topographic","Aerial"),
@@ -77,7 +79,14 @@ server <- function(input, output, session) {
         options = gpsOptions(position = "topleft", 
                              activate = TRUE, 
                              autoCenter = TRUE, maxZoom = 10, 
-                             setView = TRUE))
+                             setView = TRUE)) %>% 
+      addMeasure(
+        position = "topleft",
+        primaryLengthUnit = "meters",
+        primaryAreaUnit = "sqmeters",
+        activeColor = "#3D535D",
+        completedColor = "#7D4479",
+        localization = "en")
   })
   
   
@@ -96,7 +105,7 @@ server <- function(input, output, session) {
 
     lines_lengths_sorted <- safespace_EEA_crs[order(safespace_EEA_crs$length),]
     
-    nearest <- lines_lengths_sorted$nearest_marker[1,]
+    nearest_line <- lines_lengths_sorted$nearest_marker[1,]
     nearest_name <- lines_lengths_sorted$name[1]
     nearest_length <- lines_lengths_sorted$length[1]
     nearest_safe <- lines_lengths_sorted$geometry[1]
@@ -104,8 +113,8 @@ server <- function(input, output, session) {
     nearest_website <- lines_lengths_sorted$website[1]
     nearest_open <- lines_lengths_sorted$opnng_h[1]
     
-    print(nearest_name)
-    print(nearest)
+    #print(nearest_name)
+    #print(nearest)
     
     leafletProxy("map") %>% clearPopups() %>% 
       addMarkers(
@@ -130,7 +139,7 @@ server <- function(input, output, session) {
                        "<br> Website: ", nearest_website,
                        "<br> Opening hours: ", nearest_open)
       ) %>% 
-      addPolygons(data = nearest)
+      addPolygons(data = nearest_line)
   })
   
 }
