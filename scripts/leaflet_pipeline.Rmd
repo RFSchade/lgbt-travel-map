@@ -13,7 +13,7 @@ knitr::opts_knit$set(root.dir = "..") # Hi Sophia! I inserted this because it is
 
 ```{r}
 # Load the sf package
-pacman::p_load(pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets, raster, shiny)
+pacman::p_load(pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets, raster, shiny, leaflet.extras)
 
 # set wd
 setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map")
@@ -154,19 +154,37 @@ test_map_1 <- leaflet() %>%
               popup = paste0("Name: ", "gayboorhood-name"), 
               group = "Safe space density") %>%
   
-  # add heatmap
-  #addRasterImage(Aster) %>% 
-  # it doesn't recognize the addHeatmap() function, so it's probably in a package
-  #addHeatmap(map, lng = NULL, lat = NULL, intensity = NULL,
-  #layerId = NULL, group = NULL, minOpacity = 0.05, max = 1,
-  #radius = 25, blur = 15, gradient = NULL, cellSize = NULL,
-  #data = leaflet::getMapData(map)) %>% 
+  
+  addEasyButton(
+        easyButton(
+          position = "topleft",
+          icon = "fa-crosshairs",
+          title = "Locate Me",
+          onClick = JS(
+            c(
+              "function(btn,  map){
+              map.locate({setView:true,enableHighAccuracy: true });
+              map.state('add-markers')
+              }"
+            )
+          )
+        )
+      ) %>% 
 
   # add control things
   addLayersControl(
     baseGroups = c("Topographic","Aerial"),
     overlayGroups = c("Safe spaces", "More safe spaces", "Safe space density"),
-    options = layersControlOptions(collapsed = T))
+    options = layersControlOptions(collapsed = T)) %>% 
+  
+  # add GPS
+  addControlGPS(
+    options = gpsOptions(position = "topleft", 
+    activate = TRUE, 
+    autoCenter = TRUE, maxZoom = 10, 
+    setView = TRUE))
+
+activateGPS(test_map_1)
   
 test_map_1
 saveWidget(test_map_1, "test_map_1.html", selfcontained = TRUE)
@@ -186,40 +204,141 @@ library(leaflet)
 #UI is the user interface. the "map" is the outputId, which is the "output variable to read from"
 ui <- fluidPage(
   titlePanel("LGBTQ+ Travel Map"), 
-  leafletOutput("map"), 
-  p(),
-  actionButton("recalc", "New points")) 
+  leafletOutput("map"))
+
+server <- function(input, output, session) {
+  
+  # map
+  output$map <- renderLeaflet({
+  
+    leaflet() %>%
+      addTiles() %>% # insert this in the parenthesis: attribution = 'By Rebecca Schade and Sophia Karlson'
+      addControl("Queer Travel Map", position = "topleft", className="map-title") %>% # make this bigger!
+      addProviderTiles("Esri.WorldTopoMap", group = "Topographic") %>%
+      addProviderTiles("Esri.WorldImagery", group = "Aerial") %>%
+      
+      addCircleMarkers(data = safespace_crs,
+                       opacity = 0.5, color = "black", stroke = TRUE,
+                       fillOpacity = 0.5, weight=2, fillColor = "purple",
+                       popup = paste0("Name: ", test_data$name,
+                                      "<br> Type: ", test_data$amenity,
+                                      "<br> Website: ", test_data$website,
+                                      "<br> Opening hours: ", test_data$opnng_h), #,
+                       # if we had the data, these could be added as well:
+                       #"<br> Address: ", test_data$address),
+                       # who it is for (only men, everyone etc)
+                       group = "Safe spaces",#if we don't want the user to be able to not see all the safe spaces, cut this
+                       #) %>%
+                       clusterOptions = markerClusterOptions()) %>%
+      
+      
+      addMeasure(
+        position = "topleft",
+        primaryLengthUnit = "meters",
+        primaryAreaUnit = "sqmeters",
+        activeColor = "#3D535D",
+        completedColor = "#7D4479",
+        localization = "en") %>% 
+    
+    # do the control stuff
+      addLayersControl(
+        baseGroups = c("Topographic","Aerial"),
+        overlayGroups = c("Safe spaces", "Gayborhoods"),#"My location"
+        options = layersControlOptions(collapsed = T))
+  })
+  
+  observe({
+    
+    event <- input$map_gps_located
+    if (is.null(event))
+      return()
+
+    leafletProxy("map") %>% clearPopups() %>% addMarkers(
+      lng = event$coordinates$lng,
+      lat = event$coordinates$lat) %>% 
+      addPopups(
+        lng = event$coordinates$lng,
+        lat = event$coordinates$lat, "You are here!")
+  })
+  
+}
+
+shinyApp(ui,server)
+```
+
+
+To do:
+- make density overlay - as convex hulls around areas with more than x points in y radius from eachother
+- how to add overlay and do the groups thing: https://rstudio.github.io/leaflet/showhide.html 
+- add legend (but that depends on the kind of density map)
+
+try out bounding boxes
+
+for later: 
+- add legend
+- better title
+- fix NA's? 
+
+center cross, pop-up marker for the nearest one (incl distance to it)
+- or find nearest safe space to each chosen location (so not always center)
+
+
+  # some things that work:
+  center_coor <- observeEvent(input$map_center, {
+    event <- input$map_center
+    lat <- event$lat
+    lon <- event$lng
+    print(cbind(lat, lon))
+  })
+  
+
+      # add density overlay here - e.g. polygons like here:
+      addPolygons(data = safe_ch,
+                  fill = T, weight = 2, color = "purple",
+                  popup = paste0("This is a gayborhood!"), 
+                  group = "Gayborhoods") %>%
+      
+      addEasyButton(
+        easyButton(
+          position = "topleft",
+          icon = "fa-crosshairs",
+          title = "Locate Me",
+          onClick = JS("
+            function(btn, map) {
+              Shiny.onInputChange('my_easy_button', 'clicked');
+            }"
+          )
+        )
+      ) %>% 
+      
+last R shiny
+```{r}
+
+#https://www.rdocumentation.org/packages/leaflet/versions/2.0.4.1/topics/leafletOutput
+#UI is the user interface. the "map" is the outputId, which is the "output variable to read from"
+ui <- fluidPage(titlePanel("LGBTQ+ Travel Map"), leafletOutput("map"))
 
 
 server <- function(input, output, session) {
   
-  points <- eventReactive(input$recalc, {
-    cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
-  }, ignoreNULL = FALSE)
-
-  # get the coordinates from the center and print them
-  #center_coor <- eventReactive(input$map_center, {#input$map_bounds, { #observeEvent
-  #  event <- input$map_center#bounds
-  #  lat <- event$lat
-  #  lon <- event$lng
-    #lat <- mean(event$north, event$south)
-    #lon <- mean(event$west, event$east)
-    #return(c(lat, lon))#event$lat, event$lng input$map_center["lat"], input$map_center["lng"]
-    #print(paste0("map center - lat: ", lat, ", lon: ", lon))
-    #print(center_coor)
-    #return(center_coor)
- # })
-  #print(center_coor)
+  #center_coor <- c()
   
-  #click_coor <- eventReactive(input$map_click, {# doesn't work with eventReactive
-   # cbind(input$map_click[1], input$map_click[2])#click_coor <- c
-    #cbind(input$map_click[1], input$map_click[2])
-    #click <- input$map_click
-    #print(paste0("click is: ", click[1]))
-    #lat <- click$lat
-    #lon <- click$lng
-    #print(paste0("click - lat: ", lat, ", lon: ", lon))
-  #}, ignoreNULL = FALSE)
+  # get the coordinates from the center and print them
+  observeEvent(input$map_bounds, {
+    event <- input$map_bounds
+    
+    lat <- mean(event$north, event$south)
+    lon <- mean(event$west, event$east)
+    
+    center_coor <- c(lat, lon) # should it be lon, lat, or lat, lon??
+    print(paste0("map center - lat: ", lat, ", lon: ", lon))
+    #print(center_coor)
+    print(center_coor)
+    
+    return(center_coor)
+  })
+  
+  
   
   
   # map
@@ -250,9 +369,14 @@ server <- function(input, output, session) {
       # add density overlay here - e.g. polygons like here:
       addPolygons(data = safe_ch,
                   fill = T, weight = 2, color = "purple",
-                  popup = paste0("This is a gayborhood!"), 
-                  group = "Gayborhoods") %>%
+                  popup = paste0("Name: ", "gayboorhood-name"), 
+                  group = "Safe space density") %>%
       
+      # do the control stuff
+      addLayersControl(
+        baseGroups = c("Topographic","Aerial"),
+        overlayGroups = c("Safe spaces", "Safe space density"),
+        options = layersControlOptions(collapsed = T)) %>% 
       
       #leaflet() %>%
       # addProviderTiles(providers$Stamen.TonerLite,
@@ -272,12 +396,89 @@ server <- function(input, output, session) {
       ) %>% 
       
       addMarkers(
-        #data = points,
-        lng = 12.5224416,#center_coor[1], mean(event$north, event$south),#click_coor[1]
-        lat = 55.6852398,#center_coor[1],click_coor[1]
-        # if we want another icon, we can use makeIcon https://rstudio.github.io/leaflet/markers.html 
-        popup = paste("You are here!"), 
-        group = "My location") %>% 
+        lng = center_coor[1], 
+        lat = center_coor[1],
+        popup = paste("You are here!")) %>% 
+      
+      addMeasure(
+        position = "topleft",
+        primaryLengthUnit = "meters",
+        primaryAreaUnit = "sqmeters",
+        activeColor = "#3D535D",
+        completedColor = "#7D4479",
+        localization = "en")
+    
+  })
+  
+}
+
+shinyApp(ui,server)
+
+```
+
+
+
+Now with the real data
+
+```{r}
+EEA_data <- st_read("data/EEA_points.shp")
+
+# plot the points (don't know why it only shows 6)
+plot(st_geometry(EEA_data))
+
+# look at the coordinates
+EEA_data["geometry"]
+
+# check the crs
+st_crs(EEA_data)
+
+# when looking at the first map (by running the next code chunk without the last bit of this chunk) the points were not at the right place - maybe 100 meters to the north east. I also got this error message:
+#sf layer has inconsistent datum (+proj=longlat +ellps=intl +towgs84=-86,-98,-119,0,0,0,0 +no_defs).
+#Need '+proj=longlat +datum=WGS84' 
+
+# Therefore, I re-projected the test data to the crs recommended in the error message above, and it worked!
+crs_needed <- "+proj=longlat +datum=WGS84"
+safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
+```
+
+map it
+
+IT WORKS!!!!!!!!!!!!!!!!!!
+```{r}
+#https://www.rdocumentation.org/packages/leaflet/versions/2.0.4.1/topics/leafletOutput
+#UI is the user interface. the "map" is the outputId, which is the "output variable to read from"
+
+r = 0.00001#sqrt(2)/10
+safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r)
+
+pacman::p_load(pacman, shiny, leaflet, leatlet.extras, tidyverse)
+
+ui <- fluidPage(
+  titlePanel("LGBTQ+ Travel Map"), 
+  leafletOutput("map"),
+  )
+
+
+server <- function(input, output, session) {
+  
+  output$map <- renderLeaflet({
+    
+    leaflet() %>%
+      addTiles() %>%
+      addControl("Queer Travel Map", position = "topleft", className="map-title") %>% #
+      addProviderTiles("Esri.WorldTopoMap", group = "Topographic") %>%
+      addProviderTiles("Esri.WorldImagery", group = "Aerial") %>%
+      
+      addCircleMarkers(data = safespace_EEA_crs,
+                       opacity = 0.5, color = "black", stroke = TRUE,
+                       fillOpacity = 0.5, weight=2, fillColor = "purple",
+                       popup = paste0("Name: ", EEA_data$name,
+                                      "<br> Type: ", EEA_data$amenity,
+                                      "<br> Website: ", EEA_data$website,
+                                      "<br> Opening hours: ", EEA_data$opnng_h), #,
+                       group = "Safe spaces",
+                       
+                       clusterOptions = markerClusterOptions()) %>%
       
       addMeasure(
         position = "topleft",
@@ -286,243 +487,146 @@ server <- function(input, output, session) {
         activeColor = "#3D535D",
         completedColor = "#7D4479",
         localization = "en") %>% 
-    
-    # do the control stuff
+      
       addLayersControl(
         baseGroups = c("Topographic","Aerial"),
-        overlayGroups = c("Safe spaces", "Gayborhoods", "My location"),
-        options = layersControlOptions(collapsed = T))
+        overlayGroups = c("Safe spaces", "Gayborhoods"),
+        options = layersControlOptions(collapsed = T)) %>% 
+      
+      addControlGPS(
+        options = gpsOptions(position = "topleft", 
+                             activate = TRUE, 
+                             autoCenter = TRUE, maxZoom = 10, 
+                             setView = TRUE))
   })
   
-}
-
-shinyApp(ui,server)
-```
-
-
-To do:
-- make density overlay - as convex hulls around areas with more than x points in y radius from eachother
-- how to add overlay and do the groups thing: https://rstudio.github.io/leaflet/showhide.html 
-- add legend (but that depends on the kind of density map)
-
-try out bounding boxes
-
-for later: 
-- add legend
-- better title
-- fix NA's? 
-
-center cross, pop-up marker for the nearest one (incl distance to it)
-- or find nearest safe space to each chosen location (so not always center)
-
-
-
-
-TEST STUFF
-
-```{r}
-
-# other things to maybe add:
-  #addMiniMap(tiles = esri[[1]], toggleDisplay = TRUE,
-   #          position = "bottomright"))
-
-  #addLegend("bottomright", pal = pal, values = ~gdp_md_est,
-   #   title = "Safe spaces",
-    #  labFormat = labelFormat(prefix = "$"),
-     # opacity = 1
-    #))
+  
+  #observe(
+   # print(paste0("map center - lat: ", input$map_gps_located$coordinates$lat, ", lon: ", input$map_gps_located$coordinates$lng))
+  #)
+  
+  observe({
     
+    event <- input$map_gps_located
+    if (is.null(event))
+      return()
+    #print(event$coordinates)
+    
+    GPS_buffer <- st_buffer(st_geometry(st_point(c(event$coordinates$lng, event$coordinates$lat))), r)
+    st_crs(GPS_buffer) <- crs_needed
+    
+    safespace_EEA_crs$nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers, pairwise = FALSE)
 
-tag.map.title <- tags$style(HTML("
-  .leaflet-control.map-title { 
-    transform: translate(-50%,20%);
-    position: fixed !important;
-    left: 50%;
-    text-align: center;
-    padding-left: 10px; 
-    padding-right: 10px; 
-    background: rgba(255,255,255,0.75);
-    font-weight: bold;
-    font-size: 28px;
-  }
-"))
+    safespace_EEA_crs$length <- st_length(safespace_EEA_crs$nearest_marker)
 
-title <- tags$div(
-  tag.map.title, HTML("Map title")
-)  
-
-rr <- tags$div(
-   HTML('<a href="https://cran.r-project.org/"> <img border="0" alt="ImageTitle" src="/PathToImage/ImageR.jpeg" width="300" height="100"> </a>')
- )  
-
-```
-
-
-```{r}
-# test europe with Layers
-leaflet() %>% 
-  addTiles() %>% 
-  setView( lng = 12.57, lat = 55.68, zoom = 5 ) %>% # view set to cosy bar in CPH
-  addProviderTiles("Esri.WorldPhysical", group = "Physical") %>% 
-  addProviderTiles("Esri.WorldImagery", group = "Aerial") %>% 
-  addProviderTiles("MtbMap", group = "Geo") %>% 
-
-addLayersControl(
-  baseGroups = c("Geo","Aerial", "Physical"),
-  options = layersControlOptions(collapsed = T))
-
-
-plot(test_data$geometry, pch = 2)
-```
-
-```{r}
-coor <- test_data$geometry
-
-coor
-
-longitude <- c()
-
-for (i in test_data){
-  longitude <- str_replace_all(test_data$geometry, "c(|,[:digit:])", "'")
-} 
-  
-test_data$longitude <- str_replace_all(test_data$geometry, "c\\(| |\\)", "")
-
-
-test_data$longitude <- str_replace_all(test_data$longitude, "[[:alnum:]\\.],", "")
-
-```
-[:digit:].[:digit:]
-[:xdigit:].[:xdigit:]
-
-
-```{r}
-# Make buffer of 5 km. Check the units of your object to correctly assign value to dist
-safe_space_1km<- st_buffer(st_geometry(safespace_crs), dist = 0.1) # I use the object cities_sf3035 and set the distance to 5000, as I assume the radius measured in meters
-plot(safe_space_1km)
-
-
-safe_ch <- st_convex_hull(st_union(safespace_crs))
-plot(safe_ch)
-class(safe_ch)
-
-st_crs(safe_ch)
-st_crs(safe_space_1km)
-
-safe_it <- st_intersection(safe_ch, safe_space_1km$geometry) # I use the geometry of safe_space_1km
-
-??st_intersection()
-
-# Dissolve the buffers into a single MULTIPOLYGON buffer feature
-safe_buff <- st_union(safe_it)
-
-
-
-c_buff <- st_transform(c_buff, crs = "+proj=longlat +datum=WGS84")
-
-```
-
-```{r}
-library(shiny)
-library(leaflet)
-
-ui <- fluidPage(titlePanel("Miles Per Gallon"), leafletOutput("map"))
-
-
-server <- function(input, output, session) {
-
- output$map <- renderLeaflet({
- leaflet() %>%
-  addProviderTiles(providers$Stamen.TonerLite,
-                   options = providerTileOptions(noWrap = TRUE)) %>%
-
-  addEasyButton(
-    easyButton(
-      position = "topleft",
-      icon = "fa-crosshairs",
-      title = "Locate Me",
-      onClick = JS(
-        c(
-          "function(btn,  map){map.locate({setView:true,enableHighAccuracy: true })}"
-        )
-      )
-    )
-      )
+    #nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers, pairwise = FALSE)
+    #lines_lengths <- st_sf(nearest_marker)
+    #lines_lengths$length <- st_length(nearest_marker)
+    #lines_lengths_sorted <- lines_lengths[order(lines_lengths$length),]
+    lines_lengths_sorted <- safespace_EEA_crs[order(safespace_EEA_crs$length),]
+    
+    #print(head(lines_lengths_sorted$name))
+    
+    nearest <- lines_lengths_sorted$nearest_marker[1,]
+    nearest_name <- lines_lengths_sorted$name[1]
+    nearest_length <- lines_lengths_sorted$length[1]
+    nearest_safe <- lines_lengths_sorted$geometry[1]
+    nearest_type <- lines_lengths_sorted$amenity[1]
+    nearest_website <- lines_lengths_sorted$website[1]
+    nearest_open <- lines_lengths_sorted$opnng_h[1]
+    
+    print(nearest_name)
+    print(nearest)
+    
+    leafletProxy("map") %>% clearPopups() %>% 
+      addMarkers(
+        lng = event$coordinates$lng,
+        lat = event$coordinates$lat,
+        popup = paste0("You are here! Follow the blue line to see your nearest safe space.
+               <br> The safe space is called ", nearest_name,
+               "<br> It is ", round(nearest_length/1000, 1), " km away."),
+        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% 
+    
+      addPopups(
+        lng = event$coordinates$lng,
+        lat = event$coordinates$lat, 
+        popup = paste0("You are here! Follow the blue line to see your nearest safe space.
+               <br> The safe space is called ", nearest_name,
+               "<br> It is ", round(nearest_length/1000, 1), " km away.")) %>% #,
+        #popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% 
+      
+      addPopups(
+        data = nearest_safe, 
+        popup = paste0("Name: ", nearest_name,
+                                      "<br> Type: ", nearest_type,
+                                      "<br> Website: ", nearest_website,
+                                      "<br> Opening hours: ", nearest_open)
+      ) %>% 
+      addPolygons(data = nearest)
   })
+  
 }
 
 shinyApp(ui,server)
 ```
 
+
+
+
 ```{r}
-# NOT RUN {
-# !formatR
-library(shiny)
-app <- shinyApp(
-  ui = fluidPage(titlePanel("LGBTQ+ Travel Map"), leafletOutput('myMap')),
-  server = function(input, output) {
-    map = leaflet() %>% addTiles() %>% setView(-93.65, 42.0285, zoom = 17)
-    output$myMap = renderLeaflet(map)
+GPS_buffer <- st_buffer(st_geometry(st_point(c(10.20209, 56.15943))), r)
+#print(GPS_buffer)
+    
+st_crs(GPS_buffer) <- crs_needed
+
+#GPS_buffer <- st_transform(GPS_buffer, crs = crs_needed)
+
+#nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers)
+    
+print(nearest_marker)
+plot(nearest_marker)
+class(nearest_marker)
+
+st_length(nearest_marker)
+mean(st_length(nearest_marker))
+plot(min(st_length(nearest_marker)))
+
+lines_lengths <- st_sf(nearest_marker)
+lines_lengths$length <- st_length(nearest_marker)
+
+
+lines_lengths_no_zero <- lines_lengths[-c(402, 405, 562),]
+ 
+lines_lengths_no_zero_sorted <- lines_lengths_no_zero[order(lines_lengths_no_zero$length),]
+
+plot(lines_lengths_no_zero_sorted$nearest_marker[1,])
+
+
+
+
+
+safespace_EEA_crs$nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers, pairwise = FALSE)
+
+safespace_EEA_crs$length <- st_length(safespace_EEA_crs$nearest_marker)
+
+```
+
+
+for (i in range(nrow(lines_lengths))){
+  if (lines_lengths$length == "0.0 [m]"){
+    lines_lengths <- lines_lengths[-c(i), ]
   }
-)
-
-# }
-# NOT RUN {
-if (interactive()) app
-# }
-```
-
-```{r}
-# NOT RUN {
-leaf <- leaflet() %>%
-  addTiles() %>%
-  # central park
-  fitBounds( -73.9, 40.75, -73.95, 40.8 ) %>%
-  addMeasure()
-
-leaf
-
-# customizing
-leaf %>% addMeasure(
-  position = "bottomleft",
-  primaryLengthUnit = "meters",
-  primaryAreaUnit = "sqmeters",
-  activeColor = "#3D535D",
-  completedColor = "#7D4479",
-  localization = "de"
-)
-
-# }
-```
-
-```{r}
-library(shiny)
-library(leaflet)
-
-r_colors <- rgb(t(col2rgb(colors()) / 255))
-names(r_colors) <- colors()
-
-ui <- fluidPage(
-  leafletOutput("mymap"),
-  p(),
-  actionButton("recalc", "New points")
-)
-
-server <- function(input, output, session) {
-
-  points <- eventReactive(input$recalc, {
-    cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
-  }, ignoreNULL = FALSE)
-
-  output$mymap <- renderLeaflet({
-    leaflet() %>%
-      addProviderTiles(providers$Stamen.TonerLite,
-        options = providerTileOptions(noWrap = TRUE)
-      ) %>%
-      addMarkers(data = points())
-  })
 }
 
-shinyApp(ui, server)
-```
 
+  centeredZ <- eventReactive(input$map_bounds,{
+    if (is.null(input$map_bounds))
+      return(NULL)
+    bounds <- input$map_bounds
+    center <- c(mean(bounds$north, bounds$south),mean(bounds$east, bounds$west))
+    #center <- c( 42.65214,-71.43929)
+    nearest.zip <- zip_coord[which.min(colSums(t(zip_coord[-1]) - center)^2),1]    
+    # Pick out the point
+    subset(zip_coord, ZIP == nearest.zip)
+  })
+  
