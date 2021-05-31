@@ -441,11 +441,13 @@ safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
 ```
 
 map it
+
+IT WORKS!!!!!!!!!!!!!!!!!!
 ```{r}
 #https://www.rdocumentation.org/packages/leaflet/versions/2.0.4.1/topics/leafletOutput
 #UI is the user interface. the "map" is the outputId, which is the "output variable to read from"
 
-r = sqrt(2)/10
+r = 0.00001#sqrt(2)/10
 safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r)
 
 pacman::p_load(pacman, shiny, leaflet, leatlet.extras, tidyverse)
@@ -453,14 +455,7 @@ pacman::p_load(pacman, shiny, leaflet, leatlet.extras, tidyverse)
 ui <- fluidPage(
   titlePanel("LGBTQ+ Travel Map"), 
   leafletOutput("map"),
-  column(
-    3,
-    h5("This doesn't work: It always shows the same ZIP:"),
-    tableOutput("centerZip"),
-    br(),
-    h5("This works: the ZIPs change as you move the map around:"),
-    tableOutput("inBoundsZIPs")
-  ))
+  )
 
 
 server <- function(input, output, session) {
@@ -516,10 +511,27 @@ server <- function(input, output, session) {
       return()
     #print(event$coordinates)
     
-    #GPS_buffer <- st_buffer(st_geometry(st_point(c(event$coordinates$lng, event$coordinates$lat))), r)
-    #st_crs(GPS_buffer) <- crs_needed
+    GPS_buffer <- st_buffer(st_geometry(st_point(c(event$coordinates$lng, event$coordinates$lat))), r)
+    st_crs(GPS_buffer) <- crs_needed
+    
+    safespace_EEA_crs$nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers, pairwise = FALSE)
+
+    safespace_EEA_crs$length <- st_length(safespace_EEA_crs$nearest_marker)
+
     #nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers, pairwise = FALSE)
-    #print(nearest_marker)
+    #lines_lengths <- st_sf(nearest_marker)
+    #lines_lengths$length <- st_length(nearest_marker)
+    #lines_lengths_sorted <- lines_lengths[order(lines_lengths$length),]
+    lines_lengths_sorted <- safespace_EEA_crs[order(safespace_EEA_crs$length),]
+    
+    #print(head(lines_lengths_sorted$name))
+    
+    nearest <- lines_lengths_sorted$nearest_marker[1,]
+    nearest_name <- lines_lengths_sorted$name[1]
+    nearest_length <- lines_lengths_sorted$length[1]
+    
+    print(nearest_name)
+    print(nearest)
     
     leafletProxy("map") %>% clearPopups() %>% 
       #addMarkers(
@@ -527,29 +539,68 @@ server <- function(input, output, session) {
         #lat = event$coordinates$lat) %>% 
       addPopups(
         lng = event$coordinates$lng,
-        lat = event$coordinates$lat, "Here are you! Your nearest safe space is ")
+        lat = event$coordinates$lat, 
+        paste0("You are here! Follow the blue line to go to your nearest safe space.
+               <br> The safe space is called ", nearest_name,
+               "<br> It is ", round(nearest_length/1000, 1), " km away."),
+        popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% 
+      
+      addPolygons(data = nearest)
   })
   
 }
 
 shinyApp(ui,server)
+```
 
 
+
+
+```{r}
 GPS_buffer <- st_buffer(st_geometry(st_point(c(10.20209, 56.15943))), r)
 #print(GPS_buffer)
     
 st_crs(GPS_buffer) <- crs_needed
 
 #GPS_buffer <- st_transform(GPS_buffer, crs = crs_needed)
-    
-nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers)
+
+#nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers)
     
 print(nearest_marker)
 plot(nearest_marker)
 class(nearest_marker)
 
+st_length(nearest_marker)
+mean(st_length(nearest_marker))
 plot(min(st_length(nearest_marker)))
+
+lines_lengths <- st_sf(nearest_marker)
+lines_lengths$length <- st_length(nearest_marker)
+
+
+lines_lengths_no_zero <- lines_lengths[-c(402, 405, 562),]
+ 
+lines_lengths_no_zero_sorted <- lines_lengths_no_zero[order(lines_lengths_no_zero$length),]
+
+plot(lines_lengths_no_zero_sorted$nearest_marker[1,])
+
+
+
+
+
+safespace_EEA_crs$nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers, pairwise = FALSE)
+
+safespace_EEA_crs$length <- st_length(safespace_EEA_crs$nearest_marker)
+
 ```
+
+
+for (i in range(nrow(lines_lengths))){
+  if (lines_lengths$length == "0.0 [m]"){
+    lines_lengths <- lines_lengths[-c(i), ]
+  }
+}
+
 
   centeredZ <- eventReactive(input$map_bounds,{
     if (is.null(input$map_bounds))
@@ -561,3 +612,4 @@ plot(min(st_length(nearest_marker)))
     # Pick out the point
     subset(zip_coord, ZIP == nearest.zip)
   })
+  
