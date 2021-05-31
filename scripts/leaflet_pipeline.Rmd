@@ -9,7 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 ```{r}
 # Load the sf package
 pacman::p_load(pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets, raster, shiny, leaflet.extras)

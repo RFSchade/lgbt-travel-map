@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+This script includes more wrangling and experimenting that resulted in the shiny app script.
+
 Shiny - find location and nearest safe space feature
 
 UI: user interface
