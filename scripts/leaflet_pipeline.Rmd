@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "..") # Hi Sophia! I inserted this because it is easier to set workingdirectory in rmarkdowns in this way 
 ```
 
+This script includes wrangling and experimenting that resulted in the shiny app script.
+
 ```{r}
 # Load the sf package
 pacman::p_load(pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets, raster, shiny, leaflet.extras)
