@@ -1,3 +1,8 @@
+#### To run the script, paste this into the console: 
+#library(shiny)
+#runApp("shinyapp")
+
+
 #### LOAD PACKAGES AND DATA ####
 pacman::p_load(pacman, shiny, leaflet, leatlet.extras, tidyverse)
 
@@ -168,7 +173,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui,server)
-
-#getwd()
-#library(shiny)
-#runApp("shinyapp")
