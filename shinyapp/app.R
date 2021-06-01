@@ -6,16 +6,64 @@
 #setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
 
 #### LOAD PACKAGES AND DATA ####
-pacman::p_load(pacman, shiny, leaflet, leatlet.extras, tidyverse)
-
+pacman::p_load(pacman, shiny, sf, leaflet, leaflet.extras, tidyverse, stringr, htmlwidgets, dplyr)
+#pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets, raster, shiny
 # load in data
-EEA_data <- st_read("../data/EEA_points.shp")#
+
+EEA_data <- st_read("data/EEA_points.shp")#../
 
 # plot the points (don't know why it only shows 6)
 #plot(st_geometry(EEA_data))
 
 # look at the coordinates
 #EEA_data["geometry"]
+
+
+
+
+#### Safe space hulls data:
+# Checking data 
+#head(test_data)
+
+# re-projecting data because I am a dum dum 
+test_transform <- st_transform(EEA_data, crs = 3035)
+head(test_transform)
+# > Perfect! The unit of this is in metres! 
+plot(st_geometry(test_transform))
+
+# Making a coordinate dataframe with lat and long in separate columns
+test_transform_df <- st_coordinates(test_transform)
+colnames(test_transform_df) <- c('northing', 'easting')
+
+# Making clusters
+# > Units should be in metres, so this should be 5 km radius
+res <-  dbscan(test_transform_df, eps = 5000, minPts = 3)
+res
+
+# Giving datapoints cluster ID's 
+test_transform$dbscan_id <- res$cluster
+
+# Making a dataset of clusters
+clusters <- test_transform %>%
+  filter(dbscan_id >= 1) %>% 
+  group_by(dbscan_id) %>% 
+  summarize(geometry = st_union(geometry), nr_points = n())
+
+# Computing the convex hull 
+cluster_hull <- st_convex_hull(clusters)
+
+# Ploting the points together with the hull
+plot(st_geometry(test_transform));plot(cluster_hull, add = TRUE) 
+# > This is not a very good visualization, but I think I get it. 
+
+#=====> Maybe it will help if I try to visualize it in leaflet 
+# Transforming to web mercator 
+crs_needed <- "+proj=longlat +datum=WGS84"
+test_web <- st_transform(test_transform, crs = crs_needed)
+hull_web<- st_transform(cluster_hull, crs = crs_needed)
+
+
+
 
 # check the crs
 #st_crs(EEA_data)
@@ -87,6 +135,13 @@ server <- function(input, output, session) {
                        clusterOptions = markerClusterOptions()) %>%
       
       
+      # add overlay - e.g. polygon like here:
+      addPolygons(data = hull_web,
+                  fill = T, weight = 2, color = "purple",
+                  popup = "This is a gayborhood!", #paste0("Name: ", "gayboorhood-name"), 
+                  group = "Gayborhoods") %>%
+      
+      
       # add a control panel to control the tiles and groups
       addLayersControl(
         baseGroups = c("Topographic","Aerial"),
@@ -150,25 +205,45 @@ server <- function(input, output, session) {
       addMarkers(
         lng = event$coordinates$lng,
         lat = event$coordinates$lat,
-        popup = paste0("You are here! Follow the blue line to see your nearest safe space.
-               <br> The safe space is called ", nearest_name,
-                       "<br> It is ", round(nearest_length/1000, 1), " km away."),
+        popup = "You are here!",
+      # popup = paste0("You are here! Zoom in and follow the blue line to see your nearest safe space.
+      #       <br> The safe space is ", round(nearest_length/1000, 1), " km away.
+      #      <br> Name: ", nearest_name,
+      #    "<br> Type: ", nearest_type,
+      #   "<br> Website: ", nearest_website,
+      #  "<br> Opening hours: ", nearest_open)) %>%
         popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% 
       
       addPopups(
         lng = event$coordinates$lng,
         lat = event$coordinates$lat, 
-        popup = paste0("You are here! Follow the blue line to see your nearest safe space.
-               <br> The safe space is called ", nearest_name,
-                       "<br> It is ", round(nearest_length/1000, 1), " km away.")) %>%
+        popup = "You are here!") %>% 
+       # popup = paste0("You are here! Zoom in and follow the blue line to see your nearest safe space.
+        #       <br> The safe space is ", round(nearest_length/1000, 1), " km away.
+         #      <br> Name: ", nearest_name,
+          #    "<br> Type: ", nearest_type,
+           #   "<br> Website: ", nearest_website,
+            #  "<br> Opening hours: ", nearest_open)) %>%
 
+      addMarkers(
+        data = nearest_safe, 
+        popup = paste0("This is your nearest safe space. Zoom in and follow the blue line to see the exact location.
+      <br> It is ", round(nearest_length/1000, 1), " km away from your position.
+    <br> Name: ", nearest_name,
+              "<br> Type: ", nearest_type,
+              "<br> Website: ", nearest_website,
+              "<br> Opening hours: ", nearest_open),
+        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>%
+      
       addPopups(
         data = nearest_safe, 
-        popup = paste0("Name: ", nearest_name,
+        popup = paste0("This is your nearest safe space. Zoom in and follow the blue line to see the exact location.
+      <br> It is ", round(nearest_length/1000, 1), " km away from your position.
+    <br> Name: ", nearest_name,
                        "<br> Type: ", nearest_type,
                        "<br> Website: ", nearest_website,
-                       "<br> Opening hours: ", nearest_open)
-      ) %>% 
+                       "<br> Opening hours: ", nearest_open)) %>%
+      
       addPolygons(data = nearest_line)
   })
   
