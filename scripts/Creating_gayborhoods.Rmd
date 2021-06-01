@@ -1,0 +1,121 @@
+---
+title: "Creating Geyborhoods"
+author: "Rebecca Folmer Schade & Sophia Kleist Karlson"
+date: "2021-06-01 updated "
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "..")
+```
+
+## Loading packages
+
+```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
+# Quick install/load of all used packages if needed 
+# install.packages("pacman")
+# pacman::p_load(pacman, tidyverse, sf, leaflet, raster, dbscan)
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(raster)
+library(dbscan)
+```
+
+# Loading data 
+
+```{r, results='hide', warning=FALSE, message=FALSE, error=FALSE}
+# load data
+EEA_points <- st_read("data/EEA_points.shp")
+```
+
+# Creating Gayborhoods spatial object
+
+```{r}
+# Checking data 
+head(EEA_points)
+# > The unit of the projecttion is metres
+
+# Making a coordinate dataframe with lat and long in separate columns
+EEA_points_df <- st_coordinates(EEA_points)
+colnames(EEA_points_df) <- c('northing', 'easting')
+
+# Making clusters
+# > Units should be in metres, so this should be 5 km radius
+res <-  dbscan(EEA_points_df, eps = 5000, minPts = 3)
+res
+
+# Giving datapoints cluster ID's 
+EEA_points$dbscan_id <- res$cluster
+
+# Making a dataset of clusters
+clusters <- EEA_points %>%
+  filter(dbscan_id >= 1) %>% 
+  group_by(dbscan_id) %>% 
+  summarize(nr_points = n(), geometry = st_union(geometry))
+
+# Computing the convex hull 
+cluster_hull <- st_convex_hull(clusters)
+
+#=====> Maybe it will help if I try to visualize it in leaflet 
+# Transforming to web mercator 
+crs_needed <- "+proj=longlat +datum=WGS84"
+test_web <- st_transform(EEA_points, crs = crs_needed)
+hull_web<- st_transform(cluster_hull, crs = crs_needed)
+
+pacman::p_load(pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets, raster, shiny)
+
+# Leaflet
+#### map it
+test_map_1 <- leaflet() %>%
+  addTiles() %>% 
+  addControl("Queer Travel Map", position = "topleft", className="map-title") %>% 
+  addProviderTiles("Esri.WorldTopoMap", group = "Topographic") %>%
+  addProviderTiles("Esri.WorldImagery", group = "Aerial") %>%
+  
+  # first overlay:
+  addCircleMarkers(data = test_web,
+                   opacity = 0.5, color = "black", stroke = TRUE,
+                   fillOpacity = 0.5, weight=2, fillColor = "purple",
+                   popup = paste0("Name: ", test_web$name,
+                                  "<br> Type: ", test_web$amenity,
+                                  "<br> Website: ", test_web$website,
+                                  "<br> Opening hours: ", test_web$opnng_h),
+                   group = "Safe spaces",
+                   clusterOptions = markerClusterOptions()) %>%
+  
+  # add overlay - e.g. polygon like here:
+  addPolygons(data = hull_web,
+              fill = T, weight = 2, color = "purple",
+              popup = paste0("Name: ", "gayboorhood-name"), 
+              group = "Safe space density") %>%
+  
+  # add heatmap
+  #addRasterImage(Aster) %>% 
+  # it doesn't recognize the addHeatmap() function, so it's probably in a package
+  #addHeatmap(map, lng = NULL, lat = NULL, intensity = NULL,
+  #layerId = NULL, group = NULL, minOpacity = 0.05, max = 1,
+  #radius = 25, blur = 15, gradient = NULL, cellSize = NULL,
+  #data = leaflet::getMapData(map)) %>% 
+
+  # add control things
+  addLayersControl(
+    baseGroups = c("Topographic","Aerial"),
+    overlayGroups = c("Safe spaces", "More safe spaces", "Safe space density"),
+    options = layersControlOptions(collapsed = T))
+  
+test_map_1
+
+# > HA! That worked! Take that!
+# > I have not managed to change the colors depending on how many points a cljuster contains, but I have managed to create a nr_points variable!
+```
+
+# Saving data 
+
+```{r, eval=FALSE}
+st_write(cluster_hull, "data/gayborhoods.shp")
+# Putting geometry back at the end og the dataframe for neatness
+EEA_points <- EEA_points %>% dplyr::select(everything(), geometry)
+st_write(EEA_points, "data/EEA_points_clusters.shp")
+```
