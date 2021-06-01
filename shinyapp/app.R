@@ -5,11 +5,14 @@
 #uncomment the below to run in RStudio and not in the way above
 #setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
 
-#### LOAD PACKAGES AND DATA ####
-pacman::p_load(pacman, shiny, sf, leaflet, leaflet.extras, tidyverse, stringr, htmlwidgets, dplyr)
-#pacman, tidyverse, dplyr, sf, leaflet, stringr, htmlwidgets, raster, shiny
-# load in data
 
+
+
+#### LOAD PACKAGES AND DATA ####
+
+pacman::p_load(pacman, shiny, sf, leaflet, leaflet.extras, tidyverse, stringr, htmlwidgets, dplyr)
+
+# load in data
 EEA_data <- st_read("data/EEA_points.shp")#../
 
 # plot the points (don't know why it only shows 6)
@@ -18,10 +21,23 @@ EEA_data <- st_read("data/EEA_points.shp")#../
 # look at the coordinates
 #EEA_data["geometry"]
 
+# check the crs
+#st_crs(EEA_data)
+
+# when looking at the initial map (by running a leaflet map with the data) 
+#the points were not at the right place - maybe 100 meters to the north east. I also got this error message:
+#sf layer has inconsistent datum (+proj=longlat +ellps=intl +towgs84=-86,-98,-119,0,0,0,0 +no_defs).
+#Need '+proj=longlat +datum=WGS84' 
+
+# Therefore, I re-projected the test data to the crs recommended in the error message above, and it worked!
+crs_needed <- "+proj=longlat +datum=WGS84"
+safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
 
 
 
-#### Safe space hulls data:
+
+#### PREPARING SAFE SPACE HULLS/GAYBORHOODS ####
+
 # Checking data 
 #head(test_data)
 
@@ -65,23 +81,12 @@ hull_web<- st_transform(cluster_hull, crs = crs_needed)
 
 
 
-# check the crs
-#st_crs(EEA_data)
-
-# when looking at the initial map (by running a leaflet map with the data) 
-#the points were not at the right place - maybe 100 meters to the north east. I also got this error message:
-#sf layer has inconsistent datum (+proj=longlat +ellps=intl +towgs84=-86,-98,-119,0,0,0,0 +no_defs).
-#Need '+proj=longlat +datum=WGS84' 
-
-# Therefore, I re-projected the test data to the crs recommended in the error message above, and it worked!
-crs_needed <- "+proj=longlat +datum=WGS84"
-safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
-
-
-
 #### PREPARE THE BUFFERS FOR THE SAFE SPACES, TO BE USED TO FIND THE NEAREST SAFE SPACE LATER ####
-r = 0.00001
-safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r)
+
+r = 0.00001 # define buffer radius
+safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r) # make buffers
+
+
 
 
 #### UI ####
@@ -100,6 +105,8 @@ ui <- fluidPage(
        Finally, in the top right corner, you can choose if you want to see a topographic or aerial map. Here, you can also choose to see only safe spaces, or only gayborhoods.
        Creators: Rebecca Folmer Schade and Sophia Kleist Karlson.")
   ))
+
+
 
 
 #### SERVER ####
@@ -200,11 +207,16 @@ server <- function(input, output, session) {
     nearest_open <- lines_lengths_sorted$opnng_h[1] #the opening hours of the nearest safe space
     
     
-    # now we are ready to add the 
+    # now we are ready to add the stuff that happens when the "get location" button is pressed
+    # we make a leaflet Proxy map, so that the whole map doesn't have to be rendered again
     leafletProxy("map") %>% clearPopups() %>% 
+      
+      # add a marker to the location of the user 
       addMarkers(
-        lng = event$coordinates$lng,
+        lng = event$coordinates$lng, #the event object contains the longitude and latitude of the user 
         lat = event$coordinates$lat,
+        
+        # add pop-up
         popup = "You are here!",
       # popup = paste0("You are here! Zoom in and follow the blue line to see your nearest safe space.
       #       <br> The safe space is ", round(nearest_length/1000, 1), " km away.
@@ -212,8 +224,9 @@ server <- function(input, output, session) {
       #    "<br> Type: ", nearest_type,
       #   "<br> Website: ", nearest_website,
       #  "<br> Opening hours: ", nearest_open)) %>%
-        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% 
+        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% # so the pop-up doesn't disapear if the user clicks on the map
       
+      # also add an extra pop-up to the user location, which will open automatically (which the marker pop-up doesn't)
       addPopups(
         lng = event$coordinates$lng,
         lat = event$coordinates$lat, 
@@ -225,8 +238,10 @@ server <- function(input, output, session) {
            #   "<br> Website: ", nearest_website,
             #  "<br> Opening hours: ", nearest_open)) %>%
 
+      # add a marker to the nearest safe space
       addMarkers(
         data = nearest_safe, 
+        # pop-up with info
         popup = paste0("This is your nearest safe space. Zoom in and follow the blue line to see the exact location.
       <br> It is ", round(nearest_length/1000, 1), " km away from your position.
     <br> Name: ", nearest_name,
@@ -235,6 +250,7 @@ server <- function(input, output, session) {
               "<br> Opening hours: ", nearest_open),
         popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>%
       
+      # again add an extra pop-up to the nearest marker, which will open automatically (which the marker pop-up doesn't)
       addPopups(
         data = nearest_safe, 
         popup = paste0("This is your nearest safe space. Zoom in and follow the blue line to see the exact location.
@@ -244,9 +260,14 @@ server <- function(input, output, session) {
                        "<br> Website: ", nearest_website,
                        "<br> Opening hours: ", nearest_open)) %>%
       
+      # add the line from the user's location to the nearest marker, using the linestring from above
       addPolygons(data = nearest_line)
   })
   
 }
+
+
+
+#### RUN THE APP! ####
 
 shinyApp(ui,server)
