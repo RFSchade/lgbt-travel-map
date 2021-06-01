@@ -29,7 +29,8 @@ EEA_data <- st_read("../data/EEA_points.shp")# delete "../" when running it loca
 #sf layer has inconsistent datum (+proj=longlat +ellps=intl +towgs84=-86,-98,-119,0,0,0,0 +no_defs).
 #Need '+proj=longlat +datum=WGS84' 
 
-# Therefore, I re-projected the test data to the crs recommended in the error message above, and it worked!
+# I can also read here https://rstudio.github.io/leaflet/projections.html that WGS84 is the default projection of Leaflet 
+# -> therefore, I re-project the data to this crs and it works!
 crs_needed <- "+proj=longlat +datum=WGS84"
 safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
 
