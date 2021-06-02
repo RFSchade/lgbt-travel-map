@@ -13,7 +13,7 @@
 pacman::p_load(pacman, shiny, sf, leaflet, leaflet.extras, tidyverse, stringr, htmlwidgets, dplyr)
 
 # load in data
-EEA_data <- st_read("data/EEA_points.shp")#../
+EEA_data <- st_read("../data/EEA_points.shp")# delete "../" when running it locally
 
 # plot the points (don't know why it only shows 6)
 #plot(st_geometry(EEA_data))
@@ -29,7 +29,8 @@ EEA_data <- st_read("data/EEA_points.shp")#../
 #sf layer has inconsistent datum (+proj=longlat +ellps=intl +towgs84=-86,-98,-119,0,0,0,0 +no_defs).
 #Need '+proj=longlat +datum=WGS84' 
 
-# Therefore, I re-projected the test data to the crs recommended in the error message above, and it worked!
+# I can also read here https://rstudio.github.io/leaflet/projections.html that WGS84 is the default projection of Leaflet 
+# -> therefore, I re-project the data to this crs and it works!
 crs_needed <- "+proj=longlat +datum=WGS84"
 safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
 
@@ -37,46 +38,12 @@ safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
 
 
 #### PREPARING SAFE SPACE HULLS/GAYBORHOODS ####
+# load in data
 
-# Checking data 
-#head(test_data)
+gayborhoods <- st_read("../data/gayborhoods.shp")# delete "../" when running it locally
+#plot(gayborhoods)
 
-# re-projecting data because I am a dum dum 
-test_transform <- st_transform(EEA_data, crs = 3035)
-head(test_transform)
-# > Perfect! The unit of this is in metres! 
-plot(st_geometry(test_transform))
-
-# Making a coordinate dataframe with lat and long in separate columns
-test_transform_df <- st_coordinates(test_transform)
-colnames(test_transform_df) <- c('northing', 'easting')
-
-# Making clusters
-# > Units should be in metres, so this should be 5 km radius
-res <-  dbscan(test_transform_df, eps = 5000, minPts = 3)
-res
-
-# Giving datapoints cluster ID's 
-test_transform$dbscan_id <- res$cluster
-
-# Making a dataset of clusters
-clusters <- test_transform %>%
-  filter(dbscan_id >= 1) %>% 
-  group_by(dbscan_id) %>% 
-  summarize(geometry = st_union(geometry), nr_points = n())
-
-# Computing the convex hull 
-cluster_hull <- st_convex_hull(clusters)
-
-# Ploting the points together with the hull
-plot(st_geometry(test_transform));plot(cluster_hull, add = TRUE) 
-# > This is not a very good visualization, but I think I get it. 
-
-#=====> Maybe it will help if I try to visualize it in leaflet 
-# Transforming to web mercator 
-crs_needed <- "+proj=longlat +datum=WGS84"
-test_web <- st_transform(test_transform, crs = crs_needed)
-hull_web<- st_transform(cluster_hull, crs = crs_needed)
+gayborhoods<- st_transform(gayborhoods, crs = crs_needed) # transform to the needed crs
 
 
 
@@ -142,10 +109,10 @@ server <- function(input, output, session) {
                        clusterOptions = markerClusterOptions()) %>%
       
       
-      # add overlay - e.g. polygon like here:
-      addPolygons(data = hull_web,
+      # add the gayborhood overlay
+      addPolygons(data = gayborhoods,
                   fill = T, weight = 2, color = "purple",
-                  popup = "This is a gayborhood!", #paste0("Name: ", "gayboorhood-name"), 
+                  popup = "This is a gayborhood!",
                   group = "Gayborhoods") %>%
       
       
