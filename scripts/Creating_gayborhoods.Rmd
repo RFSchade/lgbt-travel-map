@@ -43,7 +43,7 @@ colnames(EEA_points_df) <- c('northing', 'easting')
 
 # Making clusters
 # > Units should be in metres, so this should be 5 km radius
-res <-  dbscan(EEA_points_df, eps = 5000, minPts = 3)
+res <-  dbscan(EEA_points_df, eps = 4000, minPts = 3)
 res
 
 # Giving datapoints cluster ID's 
@@ -57,6 +57,11 @@ clusters <- EEA_points %>%
 
 # Computing the convex hull 
 cluster_hull <- st_convex_hull(clusters)
+
+# Computing the area of each cluster 
+cluster_area_m2 <- st_area(cluster_hull)
+cluster_area_unclass <- unclass(cluster_area_m2)
+cluster_hull$area_km2 <- cluster_area_unclass/1000
 
 #=====> Maybe it will help if I try to visualize it in leaflet 
 # Transforming to web mercator 
@@ -114,7 +119,7 @@ test_map_1
 # Saving data 
 
 ```{r, eval=FALSE}
-st_write(cluster_hull, "data/gayborhoods.shp")
+st_write(cluster_hull, "data/gayborhoods4km.shp")
 # Putting geometry back at the end og the dataframe for neatness
 EEA_points <- EEA_points %>% dplyr::select(everything(), geometry)
 st_write(EEA_points, "data/EEA_points_clusters.shp")
