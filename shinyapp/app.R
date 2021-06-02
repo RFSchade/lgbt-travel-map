@@ -3,7 +3,7 @@
 #runApp("shinyapp")
 
 #uncomment the below to run in RStudio and not in the way above
-#setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
+setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
 
 
 
@@ -79,7 +79,7 @@ ui <- fluidPage(
 #### SERVER ####
 
 # now the server function is defined
-server <- function(input, output, session) {
+server <- function(input, output) {
   
   output$map <- renderLeaflet({ # the output is a leaflet map
     
@@ -112,7 +112,7 @@ server <- function(input, output, session) {
       # add the gayborhood overlay
       addPolygons(data = gayborhoods,
                   fill = T, weight = 2, color = "purple",
-                  popup = "This is a gayborhood!",
+                  popup = paste0("This is a gayborhood! It's area is ", round((st_area(gayborhoods$geometry))/1000000, 1)," km^2 and it has ", gayborhoods$nr_points, " safe spaces, which is ", round(gayborhoods$nr_points/(st_area(gayborhoods$geometry)/1000000), 1), " safe spaces per km^2!"),
                   group = "Gayborhoods") %>%
       
       
