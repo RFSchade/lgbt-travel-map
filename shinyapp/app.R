@@ -127,7 +127,7 @@ server <- function(input, output) {
       # add the gayborhood overlay
       addPolygons(data = gayborhoods1,
                   fill = T, weight = 2, color = "purple",
-                  popup = paste0("This is a 1km gayborhood! It's area is ", round((st_area(gayborhoods$geometry))/1000000, 1)," km^2 and it has ", gayborhoods$nr_points, " safe spaces, which is ", round(gayborhoods$nr_points/(st_area(gayborhoods$geometry)/1000000), 1), " safe spaces per km^2!"),
+                  popup = paste0("This is a 1km gayborhood! It's area is ", round((st_area(gayborhoods$geometry))/1000000, 1)," km^2 and it has ", gayborhoods$nr_points, "safe spaces."), #" safe spaces, which is ", round(gayborhoods$nr_points/(st_area(gayborhoods$geometry)/1000000), 1), " safe spaces per km^2!"
                   group = "Gayborhoods1") %>%
       
       # add the gayborhood overlay
