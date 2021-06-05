@@ -40,27 +40,8 @@ safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
 #### PREPARING SAFE SPACE HULLS/GAYBORHOODS ####
 # load in data
 
-gayborhoods1 <- st_read("../data/gayborhoods1km.shp")# delete "../" when running it locally
-gayborhoods1 <- st_transform(gayborhoods1, crs = crs_needed) # transform to the needed crs
-
-gayborhoods5 <- st_read("../data/gayborhoods5km.shp")# delete "../" when running it locally
-gayborhoods5<- st_transform(gayborhoods5, crs = crs_needed) # transform to the needed crs
-
-gayborhoods2 <- st_read("../data/gayborhoods2km.shp")# delete "../" when running it locally
-gayborhoods2<- st_transform(gayborhoods2, crs = crs_needed) # transform to the needed crs
-
-gayborhoods3 <- st_read("../data/gayborhoods3km.shp")# delete "../" when running it locally
-gayborhoods3<- st_transform(gayborhoods3, crs = crs_needed) # transform to the needed crs
-
-gayborhoods4 <- st_read("../data/gayborhoods4km.shp")# delete "../" when running it locally
-gayborhoods4<- st_transform(gayborhoods4, crs = crs_needed) # transform to the needed crs
-
-gayborhoods5 <- st_read("../data/gayborhoods5km.shp")# delete "../" when running it locally
-gayborhoods5<- st_transform(gayborhoods5, crs = crs_needed) # transform to the needed crs
-
-gayborhoods500 <- st_read("../data/gayborhoods500m.shp")# delete "../" when running it locally
-gayborhoods500<- st_transform(gayborhoods500, crs = crs_needed) # transform to the needed crs
-
+gayborhoods <- st_read("../data/gayborhoods1km.shp")# delete "../" when running it locally
+gayborhoods <- st_transform(gayborhoods, crs = crs_needed) # transform to the needed crs
 
 
 #### PREPARE THE BUFFERS FOR THE SAFE SPACES, TO BE USED TO FIND THE NEAREST SAFE SPACE LATER ####
@@ -125,46 +106,18 @@ server <- function(input, output) {
       
       
       # add the gayborhood overlay
-      addPolygons(data = gayborhoods1,
+      addPolygons(data = gayborhoods,
                   fill = T, weight = 2, color = "purple",
-                  popup = paste0("This is a 1km gayborhood! It's area is ", round((st_area(gayborhoods$geometry))/1000000, 1)," km^2 and it has ", gayborhoods$nr_points, "safe spaces."), #" safe spaces, which is ", round(gayborhoods$nr_points/(st_area(gayborhoods$geometry)/1000000), 1), " safe spaces per km^2!"
+                  popup = paste0("This is a gayborhood! It's area is ", 
+                                 round((st_area(gayborhoods$geometry))/1000000, 1),
+                                 " km^2 and it has ", gayborhoods$nr_points, "safe spaces."),
                   group = "Gayborhoods1") %>%
-      
-      # add the gayborhood overlay
-      addPolygons(data = gayborhoods2,
-                  fill = T, weight = 2, color = "purple",
-                  popup = paste0("This is a 2km gayborhood! It's area is ", round((st_area(gayborhoods$geometry))/1000000, 1)," km^2 and it has ", gayborhoods$nr_points, " safe spaces, which is ", round(gayborhoods$nr_points/(st_area(gayborhoods$geometry)/1000000), 1), " safe spaces per km^2!"),
-                  group = "Gayborhoods2") %>%
-      
-      # add the gayborhood overlay
-      addPolygons(data = gayborhoods3,
-                  fill = T, weight = 2, color = "purple",
-                  popup = paste0("This is a 3km gayborhood! It's area is ", round((st_area(gayborhoods$geometry))/1000000, 1)," km^2 and it has ", gayborhoods$nr_points, " safe spaces, which is ", round(gayborhoods$nr_points/(st_area(gayborhoods$geometry)/1000000), 1), " safe spaces per km^2!"),
-                  group = "Gayborhoods3") %>%
-      
-      # add the gayborhood overlay
-      addPolygons(data = gayborhoods4,
-                  fill = T, weight = 2, color = "purple",
-                  popup = paste0("This is a 4km gayborhood! It's area is ", round((st_area(gayborhoods$geometry))/1000000, 1)," km^2 and it has ", gayborhoods$nr_points, " safe spaces, which is ", round(gayborhoods$nr_points/(st_area(gayborhoods$geometry)/1000000), 1), " safe spaces per km^2!"),
-                  group = "Gayborhoods4") %>%
-      
-      # add the gayborhood overlay
-      addPolygons(data = gayborhoods5,
-                  fill = T, weight = 2, color = "purple",
-                  popup = paste0("This is a 5km gayborhood! It's area is ", round((st_area(gayborhoods$geometry))/1000000, 1)," km^2 and it has ", gayborhoods$nr_points, " safe spaces, which is ", round(gayborhoods$nr_points/(st_area(gayborhoods$geometry)/1000000), 1), " safe spaces per km^2!"),
-                  group = "Gayborhoods5") %>%
-      
-      # add the gayborhood overlay
-      addPolygons(data = gayborhoods500,
-                  fill = T, weight = 2, color = "purple",
-                  popup = paste0("This is a 500m gayborhood! It's area is ", round((st_area(gayborhoods$geometry))/1000000, 1)," km^2 and it has ", gayborhoods$nr_points, " safe spaces, which is ", round(gayborhoods$nr_points/(st_area(gayborhoods$geometry)/1000000), 1), " safe spaces per km^2!"),
-                  group = "Gayborhoods500") %>%
       
       
       # add a control panel to control the tiles and groups
       addLayersControl(
         baseGroups = c("Topographic","Aerial"),
-        overlayGroups = c("Safe spaces", "Gayborhoods1", "Gayborhoods2", "Gayborhoods3", "Gayborhoods4", "Gayborhoods5", "Gayborhoods500"),
+        overlayGroups = c("Safe spaces", "Gayborhoods"),
         options = layersControlOptions(collapsed = F)) %>% 
       
       # add the control GPS feature, to get the location of the user
@@ -283,3 +236,5 @@ server <- function(input, output) {
 #### RUN THE APP! ####
 
 shinyApp(ui,server)
+
+#sessionInfo()
