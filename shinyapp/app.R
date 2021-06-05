@@ -2,7 +2,7 @@
 #library(shiny)
 #runApp("shinyapp")
 
-#uncomment the below to run in RStudio and not in the way above
+# uncomment the below to run locally in RStudio and not in console as above
 setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
 
 
@@ -13,7 +13,7 @@ setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
 pacman::p_load(pacman, shiny, sf, leaflet, leaflet.extras, tidyverse, stringr, htmlwidgets, dplyr)
 
 # load in data
-EEA_data <- st_read("../data/EEA_points.shp")# delete "../" when running it locally
+EEA_data <- st_read("../data/EEA_points.shp")
 
 # plot the points (don't know why it only shows 6)
 #plot(st_geometry(EEA_data))
@@ -38,18 +38,15 @@ safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
 
 
 #### PREPARING SAFE SPACE HULLS/GAYBORHOODS ####
-# load in data
 
-gayborhoods <- st_read("../data/gayborhoods1km.shp")# delete "../" when running it locally
+gayborhoods <- st_read("../data/gayborhoods1km.shp") # load in data
 gayborhoods <- st_transform(gayborhoods, crs = crs_needed) # transform to the needed crs
 
 
 #### PREPARE THE BUFFERS FOR THE SAFE SPACES, TO BE USED TO FIND THE NEAREST SAFE SPACE LATER ####
 
-r = 0.00001 # define buffer radius
+r = 0.00001 # define buffer radius to 0.00001 decimal degrees
 safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r) # make buffers
-
-
 
 
 #### UI ####
@@ -111,7 +108,7 @@ server <- function(input, output) {
                   popup = paste0("This is a gayborhood! It's area is ", 
                                  round((st_area(gayborhoods$geometry))/1000000, 1),
                                  " km^2 and it has ", gayborhoods$nr_points, "safe spaces."),
-                  group = "Gayborhoods1") %>%
+                  group = "Gayborhoods") %>%
       
       
       # add a control panel to control the tiles and groups
