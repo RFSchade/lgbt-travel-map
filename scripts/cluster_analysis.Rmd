@@ -57,51 +57,22 @@ plot(points_pre_p);plot(points_p)
 
 ```
 
-### Running quadrat test
-A clustered distribution is the alternative hypothesis. 
-
-```{r}
-# Running the quadrant test
-qt <- quadrat.test(points_p, alternative = "clustered")
-
-# Inspect the results
-plot(qt)
-print(qt)
-```
-The test is significant at p < 0.05. This, coupled with the high X2 value, indicates that the null hypothesis (i.e. that the points are randomly distributed) is wrong and that the alternative hypothesis (i.e. that the points are clustered) is true.
-
-There was, however, a warning message that the chi-square approximation may not be accurate. 
-
-### Applying G function 
-
-```{r}
-# Estimating G(r) with the correction argument as "border" for edge correction.  
-points_g <- Gest(points_p, correction = "border")
-
-# Plotting G(r) vs. r
-plot(points_g)
-```
-
-The black line (which shows the G score at the distance r) deviates quite a bit from the red line (the expected g scores in a random poisson distribution), which show that the distribution of points is quite different from a random one. A G(r) is cumulative probability, the steep slope at the smaller distances of the chart indicates that the probability of finding a nearest neighbor to the mounds close-by is higher than finding it farther away.  
-
 ### Applying K function 
 
 ```{r}
 # Estimating the K-function with the correction argument as "border" for edge correction.  
-points_k <- Kest(points_p, correction = "border")
+points_k <- Kest(points_p, correction = "Ripley")
 
 # Plotting the K-function
 plot(points_k)
 
 # Computing envelopes of K 
-k_env <- envelope(points_p, Kest, correction = "border")
+k_env <- envelope(points_p, Kest, correction = "Ripley")
 
 # Plotting the K-function with the envelope and the ". - pi * r ^ 2 ~ r" formula to center the funtion of the expected K-function for a random poisson distribution for easier comparison. 
 plot(k_env, . - pi * r ^ 2 ~ r)
+
+# plotting K normally because this is easier for me to understand in this case
+plot(k_env)
 ```
 
-The black line of the K-function (which represents the number of mounds within distance r, scaled by intensity) indicates that the points in this dataset are ususally close to each-other, rather than far away from each other. That the deviance from the red line (which represents the exprected K-function for a random poisson distribution) goes outside the envelope (represented by the grey area) indicates that these deviances are prevelant enough that they could not be attributed to statistical noise. 
-
-## Conclutions
-
-Given that the results of all three test (quadrat test, G-function, and K-function) seem to confirm each other, as well as the theoretical assumption detail pre-testing, it is likely that the points in this dataset are, indeed, clustered. 
