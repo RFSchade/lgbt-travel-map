@@ -54,16 +54,18 @@ safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r) # make buf
 # prepare the user interface
 ui <- fluidPage(
   titlePanel("LGBTQ+ Travel Map"), # map title
+  titlePanel(h5("Creators: Rebecca Folmer Schade and Sophia Kleist Karlson")), # map subtitle
   leafletOutput("map"), # the output should be a leaflet map
   column( # add a column below the map to explain the map
     10,
-    h5("Wellcome to our LGBTQ+ Travel Map! On this map, you can see safe spaces all over Europe.
-       The safe spaces are clustered within the colored bubbles, so click on a bubble to zoom in on the area you want to check out!
-       The safe spaces are marked with purple circles. Click on a circle to see information about the safe space. 
-       If you click the crosshair button on the left, you will see your own location and your nearest safe space.
-       If you click the measurement button on the left, you can plan a route and see it's length.
+    h5("Wellcome to our LGBTQ+ Travel Map! On this map, you can see LGBTQ+ safe spaces all over Europe.
+       The safe spaces and gayborhoods are hiding within the colored bubbles, so click on a bubble to zoom in on the area you want to check out!
+       The safe spaces are marked with purple circles, and gayborhoods with purple polygons. Click on a safe space or gayborhood to see information about it. 
+       If you click the crosshair button on the left, you will see your own location (red marker) and your nearest safe space (purple marker).
+       If you click the measurement button on the left, you can plan a route and see its length.
        Finally, in the top right corner, you can choose if you want to see a topographic or aerial map. Here, you can also choose to see only safe spaces, or only gayborhoods.
-       Creators: Rebecca Folmer Schade and Sophia Kleist Karlson.")
+       WARNING: The gayborhoods highlight clusters of safe spaces, but they do not guarantee that the area between those safe spaces will be safe!
+       This map is part of an exam project for the course Spatial Analytics at Aarhus University, Denmark.")
   ))
 
 
@@ -106,8 +108,9 @@ server <- function(input, output) {
       addPolygons(data = gayborhoods,
                   fill = T, weight = 2, color = "purple",
                   popup = paste0("This is a gayborhood! It's area is ", 
-                                 round((st_area(gayborhoods$geometry))/1000000, 1),
-                                 " km^2 and it has ", gayborhoods$nr_points, "safe spaces."),
+                                 round(gayborhoods$area_km2, 2),
+                                 #round(st_area(gayborhoods$geometry), 2),
+                                 " km² and it has ", gayborhoods$nr_points, " safe spaces."),
                   group = "Gayborhoods") %>%
       
       
@@ -170,60 +173,67 @@ server <- function(input, output) {
     
     
     # now we are ready to add the stuff that happens when the "get location" button is pressed
-    # we make a leaflet Proxy map, so that the whole map doesn't have to be rendered again
+    # first, we define some marker icons for the nearest safe space feature
+    icon_location <- awesomeIcons(
+      icon = 'ios-close',
+      iconColor = 'black',
+      library = 'ion',
+      markerColor = 'red'
+    )
+    
+    icon_nearest <- awesomeIcons(
+      icon = 'ios-close',
+      iconColor = 'black',
+      library = 'ion',
+      markerColor = 'purple'
+    )
+    
+    # then we make a leaflet Proxy map, so that the whole map doesn't have to be rendered again
     leafletProxy("map") %>% clearPopups() %>% 
       
+      # add a marker to the nearest safe space
+      addAwesomeMarkers(
+        data = nearest_safe, 
+        icon = icon_nearest,
+        
+        # pop-up with info
+        popup = paste0("This is your nearest safe space. Zoom in and follow the blue line to see its exact location.
+                        <br> It is ", round(nearest_length/1000, 1), " km away from your position.
+                        <br> Name: ", nearest_name,
+                       "<br> Type: ", nearest_type,
+                       "<br> Website: ", nearest_website,
+                       "<br> Opening hours: ", nearest_open),
+        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>%
+      
+      # also add an extra pop-up to the nearest marker, which will open automatically (which the marker pop-up doesn't)
+      addPopups(
+        data = nearest_safe, 
+        popup = paste0("This is your nearest safe space. Zoom in and follow the blue line to see its exact location.
+                        <br> It is ", round(nearest_length/1000, 1), " km away from your position.
+                        <br> Name: ", nearest_name,
+                       "<br> Type: ", nearest_type,
+                       "<br> Website: ", nearest_website,
+                       "<br> Opening hours: ", nearest_open)) %>%
+      
       # add a marker to the location of the user 
-      addMarkers(
+      addAwesomeMarkers(
         lng = event$coordinates$lng, #the event object contains the longitude and latitude of the user 
         lat = event$coordinates$lat,
         
         # add pop-up
         popup = "You are here!",
-      # popup = paste0("You are here! Zoom in and follow the blue line to see your nearest safe space.
-      #       <br> The safe space is ", round(nearest_length/1000, 1), " km away.
-      #      <br> Name: ", nearest_name,
-      #    "<br> Type: ", nearest_type,
-      #   "<br> Website: ", nearest_website,
-      #  "<br> Opening hours: ", nearest_open)) %>%
-        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>% # so the pop-up doesn't disapear if the user clicks on the map
+        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE),
+        
+        icon = icon_location) %>% # so the pop-up doesn't disapear if the user clicks on the map
       
-      # also add an extra pop-up to the user location, which will open automatically (which the marker pop-up doesn't)
+      # again, add an extra pop-up to the user location, which will open automatically (which the marker pop-up doesn't)
       addPopups(
         lng = event$coordinates$lng,
         lat = event$coordinates$lat, 
         popup = "You are here!") %>% 
-       # popup = paste0("You are here! Zoom in and follow the blue line to see your nearest safe space.
-        #       <br> The safe space is ", round(nearest_length/1000, 1), " km away.
-         #      <br> Name: ", nearest_name,
-          #    "<br> Type: ", nearest_type,
-           #   "<br> Website: ", nearest_website,
-            #  "<br> Opening hours: ", nearest_open)) %>%
-
-      # add a marker to the nearest safe space
-      addMarkers(
-        data = nearest_safe, 
-        # pop-up with info
-        popup = paste0("This is your nearest safe space. Zoom in and follow the blue line to see the exact location.
-      <br> It is ", round(nearest_length/1000, 1), " km away from your position.
-    <br> Name: ", nearest_name,
-              "<br> Type: ", nearest_type,
-              "<br> Website: ", nearest_website,
-              "<br> Opening hours: ", nearest_open),
-        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE)) %>%
-      
-      # again add an extra pop-up to the nearest marker, which will open automatically (which the marker pop-up doesn't)
-      addPopups(
-        data = nearest_safe, 
-        popup = paste0("This is your nearest safe space. Zoom in and follow the blue line to see the exact location.
-      <br> It is ", round(nearest_length/1000, 1), " km away from your position.
-    <br> Name: ", nearest_name,
-                       "<br> Type: ", nearest_type,
-                       "<br> Website: ", nearest_website,
-                       "<br> Opening hours: ", nearest_open)) %>%
       
       # add the line from the user's location to the nearest marker, using the linestring from above
-      addPolygons(data = nearest_line)
+      addPolygons(data = nearest_line, color = "purple")
   })
   
 }
