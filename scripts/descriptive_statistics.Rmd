@@ -1,7 +1,7 @@
 ---
 title: "Descriptive statistics"
-author: "Rebecca Folmer Schade"
-date: "3 jun 2021"
+author: "Rebecca Folmer Schade & Sophia Kleist Karlson"
+date: "2021-06-03 updated 2021-06-08"
 output: html_document
 ---
 
@@ -12,20 +12,26 @@ knitr::opts_knit$set(root.dir = "..")
 
 ## Loading packages
 
-```{r}
-pacman::p_load(pacman, sf, raster, tidyverse)
+```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
+# Quick install/load of all used packages if needed 
+# install.packages("pacman")
+# pacman::p_load(pacman, sf, raster, tidyverse, spatstat)
+library(sf)
+library(raster) 
+library(tidyverse)
+library(spatstat)
 ```
 
 ## Loading data 
 
-```{r}
+```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
+# Data on safe spaces 
 EEA_points <- st_read("data/EEA_points_clustered.shp")
+# Data on clusters of safe spaces 
 clusters <- st_read("data/gayborhoods1km.shp")
 ```
 
 ## Calculating descriptive statistics
-
-Descriptive stats: nr. of points, nr. of types, how many NA’s in each column, nr. clusters, nr. outliers, mean nr. of points in each cluster (+sd), mean area of gayborhoods (+sd), mean distance of points to each other (+sd)? 
 
 ```{r}
 #=====> How many types of points? 
@@ -34,7 +40,7 @@ unique(EEA_points$amenity)
 #=====> Distribution of types
 type_dist <- EEA_points %>% group_by(amenity) %>% summarise(distribution = n(), percent = (distribution/625)*100)
 
-#=====>How many NA's in each column?
+#=====> How many NA's in each column?
 # osm_id
 sum(is.na(EEA_points$osm_id)) # > 0
 # name
@@ -60,35 +66,22 @@ sd(clusters$area_km2) # > 0.5180967 km2
 min(clusters$area_km2) # > 0.000385697 km2
 max(clusters$area_km2) # > 2.284333 km2
 
-#====> Mean distance of points from each other 
-library(spatstat)
-# Converting points to a single multi-point
-multi_points <- st_union(EEA_points)
-# Computing the convex hull 
-points_hull <- st_convex_hull(multi_points)
-# Turning kaz_mounds into a ppp object
-points_pre_p <- as.ppp(EEA_points)
+#====> Mean of nearest neighbor point
+# Making a coordinate dataframe with lat and long in separate columns
+EEA_points_df <- st_coordinates(EEA_points)
+colnames(EEA_points_df) <- c('northing', 'easting')
 
-# Turning the convex hull into a window
-points_window <- as.owin(points_hull)
+# FInding the distance of the nearest neighbor of all safe-spaces
+nn_distance <- nndist(EEA_points_df[,1], EEA_points_df[,2])
 
-# Adding the window to the ppp object 
-points_p <-ppp(points_pre_p$x, points_pre_p$y, window=points_window)
-nn_distance <- nndist(points_p)
-
-# Caclulating mean nearest neighboor distance
+# > Caclulating mean nearest neighboor distance (divided by 1000 to convert from m to km)
 mean(nn_distance/1000) # > 14.25761 km
 sd(nn_distance/1000) # > 48.8609 km
 min(nn_distance/1000) # > 0.002802421 km
 max(nn_distance/1000) # > 537.8755 km 
 
-# Calculating mean nearest neighboor distance for noise points/clusters
-# Making a coordinate dataframe with lat and long in separate columns
-EEA_points_df <- st_coordinates(EEA_points)
-colnames(EEA_points_df) <- c('northing', 'easting')
-
+# > Calculating mean nearest neighboor distance for noise points/clusters
 # Creating grouping variable 
-nn_distance <- nndist(EEA_points_df[,1], EEA_points_df[,2])
 EEA_points$nn_distance <- nn_distance
 EEA_points$grouping <- ifelse(EEA_points$dbscan_id == 0, "noise", "cluster") 
 

@@ -68,8 +68,8 @@ st_write(raw_multipolygons, "data/raw/EEA_raw_multipolygons5.shp", layer_options
 
 ```{r, results='hide', warning=FALSE, message=FALSE, error=FALSE}
 # Loading data for cleaning 
-raw_points <- st_read("data/raw/EEA_raw_points5.shp", options = "ENCODING=UTF-8")
-raw_polygons <- st_read("data/raw/EEA_raw_polygons5.shp", options = "ENCODING=UTF-8")
+raw_points <- st_read("data/raw/EEA_raw_points.shp", options = "ENCODING=UTF-8")
+raw_polygons <- st_read("data/raw/EEA_raw_polygons.shp", options = "ENCODING=UTF-8")
 raw_lines <- st_read("data/raw/EEA_raw_lines.shp", options = "ENCODING=UTF-8")
 raw_multipolygons <- st_read("data/raw/EEA_raw_multipolygons.shp", options = "ENCODING=UTF-8")
 ```
@@ -139,9 +139,9 @@ EEA_safe_osm_filtered <- st_intersection(EEA_safe_osm, (EEA_geo %>% st_geometry(
 ### Having a look at the lines and multipolygons 
 
 ```{r}
-# looking at multipolygons
+# Looking at multipolygons
 head(EEA_rmultipoly)
-# Visualizing lines
+# Looking at linestrings
 head(EEA_rline)
 ```
 
@@ -175,6 +175,4 @@ As the lines and multypoligons were unexpected, they are saved separately for no
 ```{r, eval=FALSE}
 #===> Saving data in the data folder
 st_write(EEA_safe_osm_filtered, "data/EEA_points.shp")
-st_write(EEA_safe_osm_filtered, "data/EEA_lines.shp")
-st_write(EEA_safe_osm_filtered, "data/EEA_multypolygons.shp")
 ```

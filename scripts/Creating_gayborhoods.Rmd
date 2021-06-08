@@ -1,7 +1,7 @@
 ---
 title: "Creating Geyborhoods"
 author: "Rebecca Folmer Schade & Sophia Kleist Karlson"
-date: "2021-06-01 updated "
+date: "2021-06-01 updated 2021-06-08"
 output: html_document
 ---
 
@@ -35,7 +35,7 @@ EEA_points <- st_read("data/EEA_points.shp")
 ```{r}
 # Checking data 
 head(EEA_points)
-# > The unit of the projecttion is metres
+# > The unit of the projection is metres
 
 # Making a coordinate dataframe with lat and long in separate columns
 EEA_points_df <- st_coordinates(EEA_points)
