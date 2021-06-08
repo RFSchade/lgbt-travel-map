@@ -11,7 +11,7 @@ When running and opening the app in your browser, you will see colorful bubbles 
 WARNING: The gayborhoods highlight clusters of safe spaces, but they do not guarantee that the area between those safe spaces will be safe. 
 
 ### Running the app
-To access and interact with the map, clone the repository, and run the following code in the RStudio console: 
+To access and interact with the map, clone the repository, make sure to meet the required software and package versions, and run the following code in the RStudio console: 
 
 install.packages("shiny") 
 
@@ -22,7 +22,7 @@ runApp(“shinyapp”)
 This will run the app.R script and initialize the app. Alternatively, the you can run through the app.R script manually - here you have to be careful that the working directory is set to the "shinyapp" folder. 
 
 ### Reproducing data extraction and cleaning scripts:
-The data extraction and cleaning scripts are found in the "scripts" folder. To reproduce the scripts, simply clone the repository, make sure to meet the required software versions, have all the required packages installed, and set your working directory to
+The data extraction and cleaning scripts are found in the "scripts" folder. To reproduce the scripts, simply clone the repository, make sure to meet the required software and package versions, and set your working directory to the main folder of the project, before running the scripts.
 
 ### Meta Data: 
 
