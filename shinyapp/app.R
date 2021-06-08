@@ -57,7 +57,7 @@ ui <- fluidPage(
   titlePanel(h5("Creators: Rebecca Folmer Schade and Sophia Kleist Karlson")), # map subtitle
   leafletOutput("map"), # the output should be a leaflet map
   column( # add a column below the map to explain the map
-    10,
+    12,
     h5("Wellcome to our LGBTQ+ Travel Map! On this map, you can see LGBTQ+ safe spaces all over Europe.
        The safe spaces and gayborhoods are hiding within the colored bubbles, so click on a bubble to zoom in on the area you want to check out!
        The safe spaces are marked with purple circles, and gayborhoods with purple polygons. Click on a safe space or gayborhood to see information about it. 
