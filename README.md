@@ -24,7 +24,7 @@ runApp(“shinyapp”)
 
 This will run the app.R script and initialize the app. Alternatively, the you can run through the app.R script manually - here you have to be careful that the working directory is set to the "shinyapp" folder. 
 
-### Reproducing data extraction and cleaning scripts:
+### Reproducing scripts:
 The scripts for data extraction and cleaning, creating gayborhoods and making descriptive statistics are found in the "scripts" folder. To reproduce the scripts, simply clone the repository, make sure to meet the required software and package versions (as specified in the project report), and set your working directory to the main folder, before running the scripts.
 
 ### Metadata description:
