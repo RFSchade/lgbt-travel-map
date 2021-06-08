@@ -4,7 +4,7 @@
 
 # uncomment the below to run locally in RStudio on Sophia's computer and not in console as above
 # if un locally on another computer, the working directory should be inside the "shinyapp" folder
-setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
+#setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
 
 
 
