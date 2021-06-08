@@ -27,6 +27,4 @@ This will run the app.R script and initialize the app. Alternatively, the you ca
 ### Reproducing data extraction and cleaning scripts:
 The scripts for data extraction and cleaning, creating gayborhoods and making descriptive statistics are found in the "scripts" folder. To reproduce the scripts, simply clone the repository, make sure to meet the required software and package versions (as specified in the project report), and set your working directory to the main folder, before running the scripts.
 
-### Meta Data: 
-
-### Legal Software License:
+### Metadata description:
