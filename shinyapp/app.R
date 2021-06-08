@@ -3,7 +3,7 @@
 #runApp("shinyapp")
 
 # uncomment the below to run locally in RStudio and not in console as above
-setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
+#setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
 
 
 
@@ -222,9 +222,8 @@ server <- function(input, output) {
         
         # add pop-up
         popup = "You are here!",
-        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE),
-        
-        icon = icon_location) %>% # so the pop-up doesn't disapear if the user clicks on the map
+        popupOptions = popupOptions(autoClose = FALSE, closeOnClick = FALSE),# so the pop-up doesn't disapear if the user clicks on the map
+        icon = icon_location) %>% 
       
       # again, add an extra pop-up to the user location, which will open automatically (which the marker pop-up doesn't)
       addPopups(
