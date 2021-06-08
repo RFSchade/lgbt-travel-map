@@ -11,6 +11,6 @@ runApp(“shinyapp”)
 
 This will run the app.R script and initialize the app. Alternatively, the you can run through the app.R script manually - here you have to be careful that the working directory is set to the "shinyapp" folder. The maps’ interactive features are described below the map when the app is opened. You can also find images showing these features in the “figures” folder within this repository (the images are called “1A”-“1I”).
 
-The data extraction and cleaning scripts are 
+To data extraction and cleaning scripts are found in the "scripts" folder. To reproduce the scripts, simply
 
 # Meta Data: 
