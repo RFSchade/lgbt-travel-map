@@ -45,10 +45,14 @@ gayborhoods <- st_read("../data/gayborhoods1km.shp") # load in data
 gayborhoods <- st_transform(gayborhoods, crs = crs_needed) # transform to the needed crs
 
 
+
+
 #### PREPARE THE BUFFERS FOR THE SAFE SPACES, TO BE USED TO FIND THE NEAREST SAFE SPACE LATER ####
 
 r = 0.00001 # define buffer radius to 0.00001 decimal degrees
 safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r) # make buffers
+
+
 
 
 #### UI ####
