@@ -2,15 +2,16 @@
 #library(shiny)
 #runApp("shinyapp")
 
-# uncomment the below to run locally in RStudio and not in console as above
-#setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
+# uncomment the below to run locally in RStudio on Sophia's computer and not in console as above
+# if un locally on another computer, the working directory should be inside the "shinyapp" folder
+setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
 
 
 
 
 #### LOAD PACKAGES AND DATA ####
 
-pacman::p_load(pacman, shiny, sf, leaflet, leaflet.extras, tidyverse, stringr, htmlwidgets, dplyr)
+pacman::p_load(pacman, shiny, sf, leaflet, leaflet.extras, tidyverse, stringr, dplyr)
 
 # load in data
 EEA_data <- st_read("../data/EEA_points.shp")
@@ -244,3 +245,4 @@ server <- function(input, output) {
 shinyApp(ui,server)
 
 #sessionInfo()
+#RStudio.Version()
