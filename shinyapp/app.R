@@ -1,4 +1,5 @@
 #### To run the script, paste this into the console: 
+#install.packages("shiny")
 #library(shiny)
 #runApp("shinyapp")
 
