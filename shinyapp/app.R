@@ -1,3 +1,8 @@
+### Title: LGBTQ+ Travel Map 
+### Author: Sophia Kleist Karlson
+### Date and place: June 2021, Aarhus University, Denmark
+
+
 #### To run the script, paste this into the console: 
 #install.packages("shiny")
 #library(shiny)
