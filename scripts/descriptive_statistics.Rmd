@@ -44,7 +44,7 @@ type_dist <- EEA_points %>% group_by(amenity) %>% summarise(distribution = n(), 
 # osm_id
 sum(is.na(EEA_points$osm_id)) # > 0
 # name
-sum(is.na(EEA_points$name)) # > 8
+sum(is.na(EEA_points$name)) # > 9
 # amenity
 sum(is.na(EEA_points$amenity)) # > 127
 # opnng_h
@@ -55,14 +55,14 @@ sum(is.na(EEA_points$website)) # > 323
 sum(is.na(EEA_points$dbscan_id)) # > 0
 
 #=====> Mean points in clusters
-mean(clusters$nr_points) # > 7.653846 points
-sd(clusters$nr_points) # > 7.33748 points
+mean(clusters$nr_points) # > 7.745098 points
+sd(clusters$nr_points) # > 7.380632 points
 min(clusters$nr_points) # > 3 points
 max(clusters$nr_points) # > 37 points
 
 #=====> Mean area of Gayborhoods
-mean(clusters$area_km2) # > 0.34569 km2
-sd(clusters$area_km2) # > 0.5180967 km2
+mean(clusters$area_km2) # > 0.3522465 km2
+sd(clusters$area_km2) # > 0.5210688 km2
 min(clusters$area_km2) # > 0.000385697 km2
 max(clusters$area_km2) # > 2.284333 km2
 
@@ -75,8 +75,8 @@ colnames(EEA_points_df) <- c('northing', 'easting')
 nn_distance <- nndist(EEA_points_df[,1], EEA_points_df[,2])
 
 # > Caclulating mean nearest neighboor distance (divided by 1000 to convert from m to km)
-mean(nn_distance/1000) # > 14.25761 km
-sd(nn_distance/1000) # > 48.8609 km
+mean(nn_distance/1000) # > 14.62352 km
+sd(nn_distance/1000) # > 50.08815 km
 min(nn_distance/1000) # > 0.002802421 km
 max(nn_distance/1000) # > 537.8755 km 
 

@@ -77,11 +77,11 @@ raw_multipolygons <- st_read("data/raw/EEA_raw_multipolygons.shp", options = "EN
 ## Cleaning the data
 ### Creating a map of countries in the EEA (+ Switzerland)
 While the main visualizations are made in leaflet, this is useful for quick illustrations and subsetting data. 
-The map is made with data from [ec.eurostat.eu](https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/administrative-units-statistical-units/countries) (© EuroGeographics for the administrative boundaries). 
+The map is made with data from [naturalearthdata.com](https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-details/) (@ naturalearthdata.com.). 
 
 ```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 # loading data from eurostat 
-world_geo <- st_read("data/CNTR_RG_01M_2020_3035.shp/CNTR_RG_01M_2020_3035.shp")
+world_geo <- st_read("data/ne_10m_admin_0_sovereignty/ne_10m_admin_0_sovereignty.shp")
 head(world_geo)
 
 # Let's try plotting the data 
@@ -92,26 +92,33 @@ EEA_members <- c("Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czechia
 # > With the excption of Switzerland, the list was taken from https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Glossary:European_Economic_Area_(EEA) (2021-05-25)
 
 # Checking to see if Anything was overlooked in this list 
-sort(unique(world_geo$NAME_ENGL))
-# > Though a part of the Danish Commonwealth, Greenland and the Faroes have their own entries in the dataset 
-
-# Adding the Faroes to the list 
-EEA_members <- c(EEA_members, "Faroes", "Greenland")
-EEA_members
+sort(unique(world_geo$NAME_EN))
+# > Everything seems to be in order
 
 # Checking that all countries in the EEA_members list are present in the dataset 
-EEA_members %in% world_geo$NAME_ENGL
+EEA_members %in% world_geo$NAME_EN
+# > the sixth country on the list (Czechia) is registered in the world_geo dataset as "Czech Republic"
+
+# Changing item 6 to "Czech Republic""
+EEA_members[6] <- "Czech Republic"
 
 # Creating a map only with the countries in the EEA for subsetting data later on
-EEA_geo <- world_geo %>% dplyr::filter(NAME_ENGL %in% EEA_members)
+EEA_geo <- world_geo %>% dplyr::filter(NAME_EN %in% EEA_members)
 
 # Showing EEA territories in a plot 
 plot(st_geometry(world_geo));plot(st_geometry(EEA_geo), col = "red", fil = "red", add = TRUE)
+
+# Projections are changed to ETRS89-extended / LAEA Europe to make data wrangeling easier 
+world_geo <- world_geo %>% 
+  st_transform(crs = 3035)
+EEA_geo <- EEA_geo %>% 
+  st_transform(crs = 3035)
+
+# checking that it worked 
+plot(st_geometry(world_geo));plot(st_geometry(EEA_geo), col = "red", fil = "red", add = TRUE)
 ```
 
-
 ### Transforming, merging, and subsetting data 
-(projection is changed for the sake of visualizations)
 
 ```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 # Isolate the points and change projection 

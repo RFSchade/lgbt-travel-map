@@ -1,0 +1,183 @@
+{
+  "profile": "data-package",
+  "resources": [
+    {
+      "name": "EEA_points.shp",
+      "path": "https://github.com/RFSchade/lgbt-travel-map/tree/main/data",
+      "profile": "data-resource",
+      "schema": {
+        "fields": [
+          {
+            "name": "osm_id",
+            "type": "string",
+            "format": "default",
+            "title": "OSM ID",
+            "description": "ID given to the safe space by Open Street Maps"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "format": "default",
+            "title": "Name",
+            "description": "The name of the safe space "
+          },
+          {
+            "name": "amenity",
+            "type": "string",
+            "format": "default",
+            "title": "Amenity",
+            "description": "The type of amenity associated with the safe space - it contians 18 categories (19 including NAs)."
+          },
+          {
+            "name": "opnng_h",
+            "type": "string",
+            "format": "default",
+            "title": "Opening hours",
+            "description": "String describing the opening hours of the safe space"
+          },
+          {
+            "name": "website",
+            "type": "string",
+            "format": "default",
+            "title": "Website ",
+            "description": "The website of the safe space "
+          },
+          {
+            "name": "geometry",
+            "type": "any",
+            "format": "default",
+            "title": "Geometry",
+            "description": "Geometry of the safe spaces - they are of the type POINT "
+          }
+        ]
+      },
+      "title": "EEA points",
+      "description": "Point data on LGBT+ safe spaces within the European Economic Area ",
+      "format": "shp"
+    },
+    {
+      "name": "EEA_points_clustered.shp",
+      "path": "https://github.com/RFSchade/lgbt-travel-map/tree/main/data",
+      "profile": "data-resource",
+      "schema": {
+        "fields": [
+          {
+            "name": "osm_id",
+            "type": "string",
+            "format": "default",
+            "title": "OSM ID",
+            "description": "ID given to the safe space by Open Street Maps"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "format": "default",
+            "title": "Name",
+            "description": "The name of the safe space "
+          },
+          {
+            "name": "amenity",
+            "type": "string",
+            "format": "default",
+            "title": "Amenity",
+            "description": "The type of amenity associated with the safe space - it contians 18 categories (19 including NAs)."
+          },
+          {
+            "name": "opnng_h",
+            "type": "string",
+            "format": "default",
+            "title": "Opening hours",
+            "description": "String describing the opening hours of the safe space"
+          },
+          {
+            "name": "website",
+            "type": "string",
+            "format": "default",
+            "title": "Website ",
+            "description": "The website of the safe space "
+          },
+          {
+            "name": "dbscan_id",
+            "type": "string",
+            "format": "default",
+            "title": "DBSCAN ID",
+            "description": "ID of the cluster the safe space belongs to, provided by a DBSCAN algorithm - if the ID is 0, it means that the point does not belong to any cluster"
+          },
+          {
+            "name": "geometry",
+            "type": "any",
+            "format": "default",
+            "title": "Geometry",
+            "description": "Geometry of the safe spaces - they are of the type POINT "
+          }
+        ]
+      },
+      "title": "EEA points clustered",
+      "description": "Contains the same data as EEA_points.shp with the addition of a field containing the ID of the cluster each safe space belongs to - 0 signifies that hte safe space does not belong to any cluster",
+      "format": "shp"
+    },
+    {
+      "name": "gayborhoods1km.shp",
+      "path": "https://github.com/RFSchade/lgbt-travel-map/tree/main/data",
+      "profile": "tabular-data-resource",
+      "schema": {
+        "fields": [
+          {
+            "name": "dbscan_id",
+            "type": "string",
+            "format": "default",
+            "title": "DBSCAN ID",
+            "description": "Cluster ID provided by a DBSCAN algorithm "
+          },
+          {
+            "name": "nr_points",
+            "type": "integer",
+            "format": "default",
+            "title": "Number of points",
+            "description": "The number of points in the cluster"
+          },
+          {
+            "name": "geometry",
+            "type": "any",
+            "format": "default",
+            "title": "Geometry",
+            "description": "Geometry of the clusters - they are of the type POLYGON"
+          },
+          {
+            "name": "area_km2",
+            "type": "number",
+            "format": "default",
+            "title": "Area in km^2",
+            "description": "The area of the clusters in km^2"
+          }
+        ]
+      },
+      "title": "Gayborhoods",
+      "format": "shp",
+      "description": "Contains data on clusters of safe spaces created using a DBSCAN algorithm"
+    }
+  ],
+  "keywords": [
+    "lgbtq",
+    "safe space",
+    "Open Street Maps",
+    "clusters",
+    "DBSCAN"
+  ],
+  "name": "lgbtq_travel_map_data_package",
+  "title": "LGBTQ travel map data package",
+  "description": "Documentation of data generated for use in the LGBTQ travel map.\n",
+  "version": "1.0.0",
+  "contributors": [
+    {
+      "title": "Sophia Kleist Karlson & Rebecca Folmer Schade ",
+      "role": "author"
+    }
+  ],
+  "licenses": [
+    {
+      "title": "MIT License",
+      "path": "https://spdx.org/licenses/MIT.html"
+    }
+  ]
+}
