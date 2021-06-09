@@ -33,7 +33,9 @@ NB: As is specified in the app.R and shinyapp_io_script.R scripts, the process o
 ### Reproducing scripts:
 To reproduce the scripts in the "scripts" folder, simply clone the repository, make sure to meet the required software and package versions (as specified in the project report), and set your working directory to the main folder, before running the scripts. 
 
-NB: It should be added that even though our scripts are open source, the data is not, as it origins in **Eurostat data** which does not have an open source license. 
+NB: it should be added that while our scripts and code is open scource, the data is not. As our dataset was created with the aid of data from eurostat.eu, use of all data in this repository is granted on the condition that a) the data will not be used for commercial purposes and b)
+the source will be acknowledged. 
+(see https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/administrative-units-statistical-units)
 
 ### Metadata description:
-See the lgbtq_travel_map_data_package.json file in the "data" folder for metadata on the data used in the app. **The folder "ne_10m_admin_0_sovereignty" inside the data-folder contains data fron Natural Earth, which is used for data cleaning.**
+See the lgbtq_travel_map_data_package.json file in the "data" folder for metadata on the data used in the app. **The folder "ne_10m_admin_0_sovereignty"** inside the data-folder contains data from Eurostat, which is used for data cleaning.
