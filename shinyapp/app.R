@@ -3,7 +3,7 @@
 ### Date and place: June 2021, Aarhus University, Denmark
 
 
-#### To run the script, paste this into the console: 
+#### To run the app from the console, paste this into the console: 
 #install.packages("shiny")
 #library(shiny)
 #runApp("shinyapp")
@@ -13,14 +13,20 @@
 #setwd("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
 
 
-
-
 #### LOAD PACKAGES AND DATA ####
 
-pacman::p_load(pacman, shiny, sf, leaflet, leaflet.extras, tidyverse, stringr, dplyr)
+library(shiny)
+library(sf)
+library(leaflet)
+library(leaflet.extras)
+library(tidyverse)
+library(stringr)
+library(lwgeom)
 
 # load in data
-EEA_data <- st_read("../data/EEA_points.shp")
+EEA_data <- st_read("../data/EEA_points.shp") 
+#### NB: for sending the script to shinyapps.io (for getting a link to the app),
+#### you have to put the data-folder into the shinyapp-folder and delete the "../" from the path
 
 # plot the points (don't know why it only shows 6)
 #plot(st_geometry(EEA_data))
@@ -47,6 +53,9 @@ safespace_EEA_crs <- st_transform(EEA_data, crs = crs_needed)
 #### PREPARING SAFE SPACE HULLS/GAYBORHOODS ####
 
 gayborhoods <- st_read("../data/gayborhoods1km.shp") # load in data
+#### NB: for sending the script to shinyapps.io (for getting a link to the app),
+#### you have to put the data-folder into the shinyapp-folder and delete the "../" from the path
+
 gayborhoods <- st_transform(gayborhoods, crs = crs_needed) # transform to the needed crs
 
 
