@@ -35,7 +35,7 @@ EEA_points <- st_read("data/EEA_points.shp")
 ```{r}
 # Checking data 
 head(EEA_points)
-# > The the projection is ETRS89-extended / LAEA Europe, which has metres as a unit
+# > The unit of the projection is metres
 
 # Making a coordinate dataframe with lat and long in separate columns
 EEA_points_df <- st_coordinates(EEA_points)
