@@ -3,6 +3,8 @@ Creators: Rebecca Folmer Schade and Sophia Kleist Karlson.
 
 This repository contains the code and data for our LGBTQ+ Travel Map: an interactive map made to help LGBTQ+ people planning a safe journey. The map is made as an R shiny app and is part of an exam project for the course Spatial Analytics at Aarhus University, Denmark. 
 
+Try the app here! https://sophia-kleist-karlson.shinyapps.io/shinyapp/
+
 ### Quick overview of the repository:
 This repository contains 4 folders: "data" contains the raw and cleaned data used for the project. "figures" has screenshots taken of the app in action. In "scripts" you will find the scripts for data extraction and cleaning, creating gayborhoods and making descriptive statistics. Finally, "shinyapp" contains the app.R script that will run the shiny app. 
 
@@ -14,7 +16,9 @@ When running and opening the app in your browser, you will see colorful bubbles 
 WARNING: The gayborhoods highlight clusters of safe spaces, but they do not guarantee that the area between those safe spaces will be safe. 
 
 ### Running the app
-To access and interact with the map, clone the repository, make sure to meet the required software and package versions (as specified in the project report), and run the following code in the RStudio console: 
+To access and interact with the map, simply follow this link: https://sophia-kleist-karlson.shinyapps.io/shinyapp/
+
+If you want to open the app from RStudio, you should clone the repository, make sure to meet the required software and package versions (as specified in the project report), and run the following code in the RStudio console: 
 
 install.packages("shiny") 
 
@@ -23,6 +27,8 @@ library(shiny)
 runApp(“shinyapp”)
 
 This will run the app.R script and initialize the app. Alternatively, the you can run through the app.R script manually - here you have to be careful that the working directory is set to the "shinyapp" folder. 
+
+NB: As is specified in the app.R and shinyapp_io_script.R script, the process to make the app into a link is tied to a personal account on https://www.shinyapps.io/ and can therefore not be reproduced by a person without an account here, and the personal information in shinyapp_io_script.R has been deleted from the script here on GitHub. The app.R script here on GitHub is ready to be run in R as described above.
 
 ### Reproducing scripts:
 To reproduce the scripts in the "scripts" folder, simply clone the repository, make sure to meet the required software and package versions (as specified in the project report), and set your working directory to the main folder, before running the scripts.
