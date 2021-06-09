@@ -61,13 +61,6 @@ gayborhoods <- st_transform(gayborhoods, crs = crs_needed) # transform to the ne
 
 
 
-#### PREPARE THE BUFFERS FOR THE SAFE SPACES, TO BE USED TO FIND THE NEAREST SAFE SPACE LATER ####
-
-r = 0.00001 # define buffer radius to 0.00001 decimal degrees
-safespace_EEA_crs$buffers <- st_buffer(safespace_EEA_crs$geometry, r) # make buffers
-
-
-
 
 #### UI ####
 
@@ -166,24 +159,25 @@ server <- function(input, output) {
     if (is.null(event)) # if the event doesn't exist, ignore the rest
       return()
     
-    # now we create a buffer zone around the user's location, 
-    #with the same radius as around each safe space (as defined in the top of the script)
-    GPS_buffer <- st_buffer(st_geometry(st_point(c(event$coordinates$lng, event$coordinates$lat))), r)
-    st_crs(GPS_buffer) <- crs_needed # make sure it has the same crs as the rest of the safe spaces
+    # now we create point on the map from the user's location coordinates
+    gps_point <- st_geometry(st_point(c(event$coordinates$lng, event$coordinates$lat)))
+    st_crs(gps_point) <- crs_needed # make sure it has the same crs as the rest of the safe spaces
     
     # add a column to the safespace_EEA_crs object, containing the linestrings between the user location and each of the safe spaces
     # to get the linestrings, I use the st_nearest_points() function
-    safespace_EEA_crs$nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers, pairwise = FALSE)
+    #safespace_EEA_crs$nearest_marker <- st_nearest_points(GPS_buffer, safespace_EEA_crs$buffers, pairwise = FALSE)
+    
+    safespace_EEA_crs$nearest_marker_lines <- st_nearest_points(gps_point, safespace_EEA_crs$geometry, pairwise = FALSE)
     
     # add the length of each linestring to safespace_EEA_crs using the st_length() function
-    safespace_EEA_crs$length <- st_length(safespace_EEA_crs$nearest_marker)
+    safespace_EEA_crs$length <- st_length(safespace_EEA_crs$nearest_marker_lines)
 
     # sort safespace_EEA_crs by the length column and save as a new object (lines_lengths_sorted)
     lines_lengths_sorted <- safespace_EEA_crs[order(safespace_EEA_crs$length),]
     
     # now I define the needed variables from the lines_lengths_sorted
     # as the object is sorted from the lowest length to highest, I use the first for each variable
-    nearest_line <- lines_lengths_sorted$nearest_marker[1,] # the linestring between user location and the nearest safe space
+    nearest_line <- lines_lengths_sorted$nearest_marker_lines[1,] # the linestring between user location and the nearest safe space
     nearest_name <- lines_lengths_sorted$name[1] # the name of the nearest safe space
     nearest_length <- lines_lengths_sorted$length[1] # the distance (length of linestring) to the nearest safe space
     nearest_safe <- lines_lengths_sorted$geometry[1] # the coordinates/geometry of the nearest safe space
