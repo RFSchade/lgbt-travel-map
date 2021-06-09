@@ -34,3 +34,4 @@ NB: As is specified in the app.R and shinyapp_io_script.R scripts, the process o
 To reproduce the scripts in the "scripts" folder, simply clone the repository, make sure to meet the required software and package versions (as specified in the project report), and set your working directory to the main folder, before running the scripts.
 
 ### Metadata description:
+See the lgbtq_travel_map_data_package.json file in the "data" folder.
