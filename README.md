@@ -31,7 +31,7 @@ This will run the app.R script and initialize the app. Alternatively, the you ca
 NB: As is specified in the app.R and shinyapp_io_script.R scripts, the process of hosting the app on shinyapps.io (which gives us the link to the app), is tied to a personal account on https://www.shinyapps.io/ and can therefore not be reproduced, as the personal information in shinyapp_io_script.R has been deleted from the script here on GitHub. The app.R script here on GitHub is ready to be run in R as described above.
 
 ### Reproducing scripts:
-To reproduce the scripts in the "scripts" folder, simply clone the repository, make sure to meet the required software and package versions (as specified in the project report), and set your working directory to the main folder, before running the scripts.
+To reproduce the scripts in the "scripts" folder, simply clone the repository, make sure to meet the required software and package versions (as specified in the project report), and set your working directory to the main folder, before running the scripts. It should be added that even though our scripts are open source, the data is not, because it origins in Eurostat which does not have an open source license. 
 
 ### Metadata description:
 See the lgbtq_travel_map_data_package.json file in the "data" folder for metadata on the data used in the app. The folder "ne_10m_admin_0_sovereignty" inside the data-folder contains data fron Natural Earth, which is used for data cleaning.
