@@ -28,7 +28,7 @@ runApp(“shinyapp”)
 
 This will run the app.R script and initialize the app. Alternatively, the you can run through the app.R script manually - here you have to be careful that the working directory is set to the "shinyapp" folder. 
 
-NB: As is specified in the app.R and shinyapp_io_script.R script, the process to make the app into a link is tied to a personal account on https://www.shinyapps.io/ and can therefore not be reproduced by a person without an account here, and the personal information in shinyapp_io_script.R has been deleted from the script here on GitHub. The app.R script here on GitHub is ready to be run in R as described above.
+NB: As is specified in the app.R and shinyapp_io_script.R scripts, the process of hosting the app on shinyapps.io (which gives us the link to the app), is tied to a personal account on https://www.shinyapps.io/ and can therefore not be reproduced, as the personal information in shinyapp_io_script.R has been deleted from the script here on GitHub. The app.R script here on GitHub is ready to be run in R as described above.
 
 ### Reproducing scripts:
 To reproduce the scripts in the "scripts" folder, simply clone the repository, make sure to meet the required software and package versions (as specified in the project report), and set your working directory to the main folder, before running the scripts.
