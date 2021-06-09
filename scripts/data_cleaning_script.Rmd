@@ -82,10 +82,15 @@ The map is made with data from [naturalearthdata.com](https://www.naturalearthda
 ```{r, results='hide', warning=FALSE, error=FALSE, message=FALSE}
 # loading data from eurostat 
 world_geo <- st_read("data/ne_10m_admin_0_sovereignty/ne_10m_admin_0_sovereignty.shp")
+world_geo <- st_read("data/ne_10m_admin_0_countries/ne_10m_admin_0_countries.shp")
 head(world_geo)
 
 # Let's try plotting the data 
 plot(st_geometry(world_geo))
+
+Denmark <- world_geo[world_geo$NAME_EN == 'Denmark',]
+ggplot() + geom_sf(data = Denmark) + theme_bw()
+
 
 # Creating a list of countries that are members of the EEA 
 EEA_members <- c("Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czechia", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland", "Italy", "Latvia", "Liechtenstein", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Norway", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland")
