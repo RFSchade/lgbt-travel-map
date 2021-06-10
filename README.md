@@ -38,4 +38,4 @@ the source will be acknowledged.
 (see https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/administrative-units-statistical-units)
 
 ### Metadata description:
-See the lgbtq_travel_map_data_package.json file in the "data" folder for metadata on the data used in the app. **The folder "ne_10m_admin_0_sovereignty"** inside the data-folder contains data from Eurostat, which is used for data cleaning.
+See the lgbtq_travel_map_data_package.json file in the "data" folder for metadata on the data used in the app. The folder "CNTR_RG_01M_2020_3035.shp" inside the data-folder contains data from Eurostat, which is used for data cleaning.
