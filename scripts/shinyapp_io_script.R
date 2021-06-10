@@ -11,9 +11,10 @@ library(rsconnect) # load package
 # set the account info
 rsconnect::setAccountInfo(name='sophia-kleist-karlson',
                 # I have deleted token and secret strings below, as they show personal information:
-                          token='token', 
-                          secret='secret')
+                token='token',
+                secret='secret')
+
 
 # connect the app script to the account
 rsconnect::deployApp("~/Spatial analytics/project - queer travel map/lgbt-travel-map/shinyapp")
-Y # answer yes, if you want to update the app.R script
+# enter "Y", if you want to update the app.R script
