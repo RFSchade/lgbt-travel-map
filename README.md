@@ -4,6 +4,7 @@ Creators: Rebecca Folmer Schade and Sophia Kleist Karlson.
 This repository contains the code and data for our LGBTQ+ Travel Map: an interactive map made to help LGBTQ+ people planning a safe journey. The map is made as an R shiny app and is part of an exam project for the course Spatial Analytics at Aarhus University, Denmark. 
 
 Try the app here! https://sophia-kleist-karlson.shinyapps.io/shinyapp/
+NOTE: The app is currently deactivated and can not be reached using the link above.
 
 ### Quick overview of the repository:
 This repository contains 4 folders: "data" contains the raw and cleaned data used for the project. "figures" has screenshots taken of the app in action. In "scripts" you will find the scripts for data extraction and cleaning, creating gayborhoods and making descriptive statistics. Finally, "shinyapp" contains the app.R script that will run the shiny app. 
